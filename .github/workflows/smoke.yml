@@ -1,0 +1,48 @@
+# Kiểm tra runner GitHub (đặt ở nước ngoài) có gọi được nguồn VCI hay không.
+# Chỉ chạy thủ công: tab Actions → smoke-vci → Run workflow.
+name: smoke-vci
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VNSTOCK_TELEMETRY: "0"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Cài dependency (vnstock/vnai từ vnstocks.com, còn lại từ PyPI)
+        run: python -m pip install -r requirements.txt
+
+      - name: Chẩn đoán kết nối (không làm fail job)
+        run: |
+          for url in \
+            https://trading.vietcap.com.vn/api/ \
+            https://iq.vietcap.com.vn/api/iq-insight-service/v1/company/FPT \
+            https://cafef.vn/thi-truong-chung-khoan.rss \
+            https://vietstock.vn/144/chung-khoan.rss \
+            https://vnstocks.com/api/simple/vnstock/ ; do
+            code=$(curl -s -o /dev/null -L --max-time 20 -w '%{http_code} %{time_total}s' "$url" || echo "lỗi kết nối")
+            echo "$url -> $code"
+          done
+
+      - name: Smoke VCI — FPT
+        run: python scripts/smoke_vci.py FPT
+
+      - name: Smoke VCI — ACV
+        run: python scripts/smoke_vci.py ACV
+
+      - name: Smoke VCI — HVN
+        run: python scripts/smoke_vci.py HVN

@@ -51,6 +51,16 @@ Kiểm tra nguồn VCI: `.\.venv\Scripts\python.exe scripts\smoke_vci.py FPT`
 | `data/ohlcv/{symbol}.csv` | `date,open,high,low,close,volume` — giá VND **đã điều chỉnh** cổ tức/chia tách |
 | `data/fundamentals/{symbol}.json` | Tổng quan công ty + chỉ số TTM 8 quý gần nhất |
 | `data/signals/{symbol}.csv` | Tín hiệu từng phiên: điểm, BUY/SELL/HOLD, độ tin cậy, SL/TP, tỷ trọng vốn (%), 3 lý do |
+| `data/news/{symbol}.jsonl` | Tin tức đã dedupe kèm điểm sentiment |
+| `data/alert_state.json` | Tín hiệu đã báo gần nhất của từng mã (để chỉ alert khi đổi) |
+| `reports/backtest_{symbol}.md` / `.json` | Kết quả backtest (chỉ %) |
+
+Ghi chú về dữ liệu VCI:
+
+- VCI trả giá theo nghìn đồng; hệ thống đổi sang VND.
+- Khi có cổ tức/chia tách, VCI điều chỉnh lại toàn bộ giá quá khứ. `eod` tải chồng 14 ngày; nếu giá cũ lệch
+  quá `adjustment_tolerance` thì tự tải lại toàn bộ lịch sử.
+- ACV có 6 phiên 22–29/07/2021 volume = 0 (không có giao dịch) — giữ nguyên như nguồn trả về.
 
 ## Tín hiệu
 
@@ -102,9 +112,48 @@ Start-Process site\index.html
 - Message có giá đóng cửa, SL, TP, khối lượng (số cổ phiếu tính từ `CAPITAL_VND`, làm tròn lô 100, chỉ cho MUA),
   độ tin cậy sau sentiment, 3 lý do; dòng cuối: "Đây là tín hiệu tham khảo, không phải khuyến nghị đầu tư."
 
-Ghi chú về dữ liệu VCI:
+## Setup GitHub
 
-- VCI trả giá theo nghìn đồng; hệ thống đổi sang VND.
-- Khi có cổ tức/chia tách, VCI điều chỉnh lại toàn bộ giá quá khứ. `eod` tải chồng 14 ngày; nếu giá cũ lệch
-  quá `adjustment_tolerance` thì tự tải lại toàn bộ lịch sử.
-- ACV có 6 phiên 22–29/07/2021 volume = 0 (không có giao dịch) — giữ nguyên như nguồn trả về.
+Repo phải **public** (GitHub Pages trên gói Free chỉ dùng được cho repo public). Mọi dữ liệu commit lên repo
+chỉ gồm giá, tín hiệu, %, tin tức — không có vốn hay secret.
+
+### 1. Tạo repo và push
+
+1. Trên github.com: **New repository** → đặt tên (ví dụ `vnsignal`) → **Public** → *không* tick thêm README/.gitignore.
+2. Trên máy (PowerShell, trong thư mục project):
+
+   ```powershell
+   git remote add origin https://github.com/<user>/<repo>.git
+   git push -u origin main
+   ```
+
+### 2. Thêm Secrets
+
+**Settings → Secrets and variables → Actions → New repository secret**, tạo 4 secret (giá trị giống `.env`):
+
+| Secret | Dùng cho |
+|---|---|
+| `CAPITAL_VND` | Tính số cổ phiếu trong tin Telegram (không hiện trên dashboard) |
+| `TELEGRAM_BOT_TOKEN` | Gửi alert |
+| `TELEGRAM_CHAT_ID` | Gửi alert |
+| `ANTHROPIC_API_KEY` | Chấm sentiment tin tức |
+
+Thiếu secret nào thì bước tương ứng chỉ log warning, pipeline vẫn chạy.
+
+### 3. Bật GitHub Pages
+
+**Settings → Pages → Build and deployment → Source: GitHub Actions.** Không chọn branch — site được deploy
+từ artifact của workflow `daily`.
+
+### 4. Chạy thử lần đầu
+
+1. Tab **Actions** → nếu GitHub hỏi, bấm bật workflows cho repo.
+2. Chọn **smoke-vci** → **Run workflow** (nhánh `main`). Workflow này chỉ kiểm tra runner GitHub (ở nước ngoài)
+   gọi được VCI, CafeF, Vietstock và cài được vnstock. Phải xanh trước khi dùng workflow `daily`.
+
+### Lưu ý về GitHub Actions
+
+- Lịch `cron` của GitHub có thể **trễ 5–30 phút** (đôi khi hơn) vào giờ cao điểm; không chạy đúng từng phút.
+- GitHub **tự tắt scheduled workflow nếu repo không có commit nào trong 60 ngày**. Workflow `daily` tự commit
+  data mỗi ngày giao dịch nên thường không bị; nếu bị tắt, vào tab Actions bật lại.
+- Pages trên gói Free chỉ cho repo public.
