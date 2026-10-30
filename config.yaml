@@ -2,18 +2,51 @@ timezone: Asia/Ho_Chi_Minh
 data_source: VCI
 start_date: "2020-01-01"
 
+# Có thể override trọng số riêng từng mã: FPT: {exchange: HOSE, weights: {trend: 2, ...}}
 symbols:
   FPT: {exchange: HOSE}
   ACV: {exchange: UPCOM}
   HVN: {exchange: HOSE}
 
-# Giờ đóng cửa (giờ VN). Nến của ngày hôm nay chỉ được ghi khi đã qua
-# giờ đóng cửa + eod_buffer_minutes, tránh lưu nến đang chạy dở.
+# Giờ đóng cửa (giờ VN) và biên độ giá so với giá tham chiếu (close phiên trước).
+# Nến của ngày hôm nay chỉ được ghi khi đã qua giờ đóng cửa + eod_buffer_minutes.
 exchanges:
-  HOSE: {close: "14:45"}
-  UPCOM: {close: "15:00"}
+  HOSE: {close: "14:45", price_limit: 0.07}
+  UPCOM: {close: "15:00", price_limit: 0.15}
 eod_buffer_minutes: 15
 
 # Khi eod thấy giá các phiên cũ lệch so với file (giá điều chỉnh do cổ tức/
 # chia tách), tải lại toàn bộ lịch sử. Ngưỡng lệch tương đối:
 adjustment_tolerance: 0.002
+
+trading:
+  lot_size: 100
+  buy_fee: 0.0015
+  sell_fee: 0.0015
+  sell_tax: 0.001
+  settlement_days: 2   # mua ngày T, bán được từ phiên chiều T+2
+
+risk:
+  atr_period: 14
+  stop_atr: 2.0         # stop-loss = entry - 2*ATR
+  take_profit_atr: 3.0  # take-profit = entry + 3*ATR
+  max_position_pct: 0.35
+  risk_per_trade_pct: 0.02
+
+signals:
+  weights: {trend: 1.0, momentum: 1.0, volume: 0.5, support_resistance: 1.0}
+  buy_threshold: 0.4
+  sell_threshold: 0.4
+  ema: [20, 50, 200]
+  rsi: {period: 14, oversold: 30, overbought: 70}
+  macd: {fast: 12, slow: 26, signal: 9}
+  volume: {ma: 20, spike: 1.5}
+  breakout_window: 20
+  cross_lookback: 3     # số phiên coi một lần cắt (EMA/MACD) là "vừa xảy ra"
+
+backtest:
+  in_sample: ["2020-01-01", "2023-12-31"]
+  out_of_sample_start: "2024-01-01"
+  weight_grid: [0, 0.5, 1, 2]
+  threshold_grid: [0.3, 0.4, 0.5]
+  min_trades: 5         # bộ trọng số có ít lệnh hơn trong in-sample bị loại

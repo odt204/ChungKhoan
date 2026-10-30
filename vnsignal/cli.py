@@ -8,7 +8,9 @@ from datetime import date, timedelta
 import pandas as pd
 from dotenv import load_dotenv
 
-from vnsignal.config import FUNDAMENTALS_DIR, OHLCV_DIR, ROOT, load_config, now_vn
+from vnsignal.config import (
+    FUNDAMENTALS_DIR, OHLCV_DIR, REPORTS_DIR, ROOT, SIGNALS_DIR, capital_vnd, load_config, now_vn,
+)
 from vnsignal.data import get_source
 from vnsignal.market import drop_unfinished_bars
 from vnsignal.store import read_csv, upsert_csv, write_json
@@ -103,6 +105,57 @@ def cmd_fundamentals(cfg: dict, symbols: list[str]) -> None:
         )
 
 
+def _load_ohlcv(symbol: str) -> pd.DataFrame:
+    df = read_csv(OHLCV_DIR / f"{symbol}.csv")
+    if df.empty:
+        raise RuntimeError(f"{symbol}: chưa có dữ liệu, chạy `backfill` trước")
+    return df
+
+
+def cmd_signals(cfg: dict, symbols: list[str]) -> None:
+    from vnsignal.signals.engine import generate
+
+    for symbol in symbols:
+        sig = generate(_load_ohlcv(symbol), cfg, symbol)
+        added, changed = upsert_csv(SIGNALS_DIR / f"{symbol}.csv", sig)
+        last = sig.iloc[-1]
+        log.info(
+            "%s %s: %s (điểm %+.2f, tin cậy %d) entry %s SL %s TP %s tỷ trọng %.1f%% vốn — ghi %d mới, %d cập nhật",
+            symbol, last["date"], last["signal"], last["score"], last["confidence"],
+            f"{last['close']:,}", f"{last['stop_loss']:,}", f"{last['take_profit']:,}",
+            last["position_pct"] * 100, added, changed,
+        )
+        for reason in last["reasons"].split(" | "):
+            log.info("    • %s", reason)
+
+
+def cmd_backtest(cfg: dict, symbols: list[str]) -> None:
+    from vnsignal.backtest.report import render
+    from vnsignal.backtest.walkforward import backtest_symbol
+
+    capital = capital_vnd()
+    REPORTS_DIR.mkdir(exist_ok=True)
+    generated = now_vn().strftime("%Y-%m-%d %H:%M")
+    for symbol in symbols:
+        bt = backtest_symbol(symbol, _load_ohlcv(symbol), cfg, capital)
+        path = REPORTS_DIR / f"backtest_{symbol}.md"
+        path.write_text(render(bt, cfg, generated), encoding="utf-8", newline="\n")
+        log.info("%s → %s (%d tổ hợp)", symbol, path.relative_to(ROOT).as_posix(), bt.combos_tested)
+        rows = [("Config toàn kỳ", bt.full_cfg), ("B&H toàn kỳ", bt.bh_full)]
+        if bt.is_opt:
+            rows = [("Tối ưu IS", bt.is_opt), ("B&H IS", bt.bh_is), ("Tối ưu OOS", bt.oos_opt)] + rows
+        rows += [("Config OOS", bt.oos_cfg), ("B&H OOS", bt.bh_oos)]
+        for name, run in rows:
+            m = run.metrics
+            log.info(
+                "    %-15s %s→%s lệnh=%3d win=%5.1f%% PF=%5s CAGR=%6.1f%% MDD=%6.1f%% nắm giữ=%5.1f%%",
+                name, m["start"], m["end"], m["trades"], m["win_rate"] * 100, f"{m['profit_factor']:.2f}",
+                m["cagr"] * 100, m["max_drawdown"] * 100, m["exposure"] * 100,
+            )
+        if bt.is_opt:
+            log.info("    Trọng số tối ưu: %s, ngưỡng ±%g", bt.is_opt.weights, bt.is_opt.thresholds[0])
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(ROOT / ".env")
     _setup_logging()
@@ -114,6 +167,8 @@ def main(argv: list[str] | None = None) -> int:
         ("backfill", f"Nạp lịch sử OHLCV từ {cfg['start_date']} cho mã chưa có dữ liệu"),
         ("eod", "Lấy nến ngày mới nhất (bỏ qua nếu đã có)"),
         ("fundamentals", "Cập nhật thông tin cơ bản + chỉ số tài chính"),
+        ("signals", "Tính tín hiệu BUY/SELL/HOLD, ghi data/signals/{symbol}.csv"),
+        ("backtest", "Backtest walk-forward, ghi reports/backtest_{symbol}.md"),
     ]:
         p = sub.add_parser(name, help=help_text)
         p.add_argument("--symbols", nargs="+", choices=list(cfg["symbols"]), default=list(cfg["symbols"]))
@@ -128,6 +183,10 @@ def main(argv: list[str] | None = None) -> int:
             cmd_eod(cfg, args.symbols)
         elif args.command == "fundamentals":
             cmd_fundamentals(cfg, args.symbols)
+        elif args.command == "signals":
+            cmd_signals(cfg, args.symbols)
+        elif args.command == "backtest":
+            cmd_backtest(cfg, args.symbols)
     except Exception:
         log.exception("Lệnh `%s` lỗi", args.command)
         return 1

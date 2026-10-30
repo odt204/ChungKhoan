@@ -34,6 +34,8 @@ Mọi lệnh chạy qua một entry point:
 | `backfill [--force]` | Nạp OHLCV daily từ 2020-01-01 cho mã chưa có dữ liệu (`--force`: tải lại, upsert) |
 | `eod` | Lấy nến mới nhất; bỏ qua nếu đã có; nến hôm nay chỉ ghi khi đã đóng phiên |
 | `fundamentals` | Cập nhật `data/fundamentals/{symbol}.json` |
+| `signals` | Tính tín hiệu BUY/SELL/HOLD cho toàn bộ lịch sử, ghi `data/signals/{symbol}.csv` |
+| `backtest` | Walk-forward (tối ưu 2020–2023, kiểm tra 2024–nay), ghi `reports/backtest_{symbol}.md` |
 
 Test: `.\.venv\Scripts\python.exe -m pytest -q`
 
@@ -45,6 +47,20 @@ Kiểm tra nguồn VCI: `.\.venv\Scripts\python.exe scripts\smoke_vci.py FPT`
 |---|---|
 | `data/ohlcv/{symbol}.csv` | `date,open,high,low,close,volume` — giá VND **đã điều chỉnh** cổ tức/chia tách |
 | `data/fundamentals/{symbol}.json` | Tổng quan công ty + chỉ số TTM 8 quý gần nhất |
+| `data/signals/{symbol}.csv` | Tín hiệu từng phiên: điểm, BUY/SELL/HOLD, độ tin cậy, SL/TP, tỷ trọng vốn (%), 3 lý do |
+
+## Tín hiệu
+
+Điểm tổng hợp = trung bình có trọng số (trong `config.yaml`) của 4 rule, mỗi rule cho điểm −1..+1:
+
+- **trend**: giá so với EMA20/EMA50/EMA200, EMA20 so với EMA50 (có ghi chú khi vừa cắt nhau).
+- **momentum**: RSI14 < 30 (+1) / > 70 (−1); MACD(12,26,9) vừa cắt lên (+1) / xuống (−1), nếu không thì ±0.5 theo histogram.
+- **volume**: volume ≥ 1.5× MA20 xác nhận hướng phiên (+1 phiên tăng / −1 phiên giảm).
+- **support_resistance**: vượt đỉnh 20 phiên (+1) / thủng đáy 20 phiên (−1).
+
+Điểm ≥ `buy_threshold` → BUY, ≤ −`sell_threshold` → SELL, còn lại HOLD. Độ tin cậy = |điểm| × 100.
+Stop-loss = giá − 2×ATR14, take-profit = giá + 3×ATR14. Tỷ trọng vốn cho lệnh mua = min(35%, 2% × giá / (giá − SL));
+số cổ phiếu (làm tròn lô 100) chỉ tính lúc gửi alert bằng `CAPITAL_VND`, không ghi vào file commit.
 
 Ghi chú về dữ liệu VCI:
 
