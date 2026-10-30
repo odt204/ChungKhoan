@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}VNSignal{% endblock %}</title>
+<meta name="description" content="Tín hiệu MUA/BÁN/GIỮ tham khảo cho FPT, ACV, HVN — cập nhật sau mỗi phiên.">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html">VNSignal</a>
+  <nav>
+    <a href="index.html" {% if active == "index" %}aria-current="page"{% endif %}>Tổng quan</a>
+    {% for s in symbols %}<a href="{{ s }}.html" {% if active == s %}aria-current="page"{% endif %}>{{ s }}</a>{% endfor %}
+  </nav>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer>
+  <p><strong>{{ DISCLAIMER }}</strong></p>
+  <p>Cập nhật {{ generated_at }} (giờ Việt Nam). Dữ liệu giá: VCI (giá đã điều chỉnh). Tin tức: VCI, CafeF, Vietstock;
+    sentiment chấm bằng Claude. Không có chức năng đặt lệnh.</p>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

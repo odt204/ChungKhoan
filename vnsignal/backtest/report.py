@@ -43,6 +43,33 @@ def _verdict(strategy: Run, bh: Run) -> str:
     )
 
 
+def _clean_num(x):
+    if isinstance(x, float) and (math.isnan(x) or math.isinf(x)):
+        return None if math.isnan(x) else "inf"
+    return x
+
+
+def summary(bt: SymbolBacktest, generated_at: str) -> dict:
+    """Bảng số liệu backtest (chỉ %, không số tiền) cho dashboard."""
+    rows = []
+    if bt.is_opt is not None:
+        rows += [("Tối ưu — in-sample", bt.is_opt), ("Buy-and-hold — in-sample", bt.bh_is),
+                 ("Tối ưu — out-of-sample", bt.oos_opt), ("Buy-and-hold — out-of-sample", bt.bh_oos)]
+    rows += [("Config — toàn kỳ", bt.full_cfg), ("Buy-and-hold — toàn kỳ", bt.bh_full),
+             ("Config — out-of-sample", bt.oos_cfg)]
+    if bt.is_opt is None:
+        rows.append(("Buy-and-hold — out-of-sample", bt.bh_oos))
+    oos = bt.oos_opt or bt.oos_cfg
+    return {
+        "symbol": bt.symbol,
+        "generated_at": generated_at,
+        "optimized_weights": bt.is_opt.weights if bt.is_opt else None,
+        "rows": [{"name": name, **{k: _clean_num(v) for k, v in run.metrics.items()}} for name, run in rows],
+        "verdict_oos": _verdict(oos, bt.bh_oos).replace("**", ""),
+        "verdict_full": _verdict(bt.full_cfg, bt.bh_full).replace("**", ""),
+    }
+
+
 def render(bt: SymbolBacktest, cfg: dict, generated_at: str) -> str:
     t, r, b = cfg["trading"], cfg["risk"], cfg["backtest"]
     ex = cfg["symbols"][bt.symbol]["exchange"]

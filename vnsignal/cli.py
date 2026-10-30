@@ -130,7 +130,7 @@ def cmd_signals(cfg: dict, symbols: list[str]) -> None:
 
 
 def cmd_backtest(cfg: dict, symbols: list[str]) -> None:
-    from vnsignal.backtest.report import render
+    from vnsignal.backtest.report import render, summary
     from vnsignal.backtest.walkforward import backtest_symbol
 
     capital = capital_vnd()
@@ -140,6 +140,7 @@ def cmd_backtest(cfg: dict, symbols: list[str]) -> None:
         bt = backtest_symbol(symbol, _load_ohlcv(symbol), cfg, capital)
         path = REPORTS_DIR / f"backtest_{symbol}.md"
         path.write_text(render(bt, cfg, generated), encoding="utf-8", newline="\n")
+        write_json(REPORTS_DIR / f"backtest_{symbol}.json", summary(bt, generated))
         log.info("%s → %s (%d tổ hợp)", symbol, path.relative_to(ROOT).as_posix(), bt.combos_tested)
         rows = [("Config toàn kỳ", bt.full_cfg), ("B&H toàn kỳ", bt.bh_full)]
         if bt.is_opt:
@@ -213,6 +214,17 @@ def cmd_alert(cfg: dict, symbols: list[str], summary: bool) -> None:
              "cập nhật" if written else "không đổi")
 
 
+def cmd_build_site(cfg: dict) -> None:
+    from vnsignal.sitebuilder import SITE_DIR, build
+
+    now = now_vn()
+    written = build(cfg, SITE_DIR, now.date(), now.strftime("%H:%M %d/%m/%Y"))
+    total_kb = sum(p.stat().st_size for p in written) / 1024
+    log.info("build-site: %d file, %.0f KB → %s", len(written), total_kb, SITE_DIR.relative_to(ROOT).as_posix())
+    for p in written:
+        log.info("    %s (%.0f KB)", p.relative_to(ROOT).as_posix(), p.stat().st_size / 1024)
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(ROOT / ".env")
     _setup_logging()
@@ -235,6 +247,7 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--force", action="store_true", help="Tải lại toàn bộ kể cả khi đã có dữ liệu")
         if name == "alert":
             p.add_argument("--summary", action="store_true", help="Gửi bản tổng hợp mọi mã dù tín hiệu không đổi")
+    sub.add_parser("build-site", help="Sinh dashboard tĩnh vào site/ (mở được bằng file://)")
     args = parser.parse_args(argv)
 
     try:
@@ -252,6 +265,8 @@ def main(argv: list[str] | None = None) -> int:
             cmd_news(cfg, args.symbols)
         elif args.command == "alert":
             cmd_alert(cfg, args.symbols, args.summary)
+        elif args.command == "build-site":
+            cmd_build_site(cfg)
     except Exception:
         log.exception("Lệnh `%s` lỗi", args.command)
         return 1

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}VNSignal — Tín hiệu FPT, ACV, HVN{% endblock %}
+{% block content %}
+<section class="intro">
+  <h1>Tín hiệu hiện tại</h1>
+  <p class="muted">Điểm tổng hợp từ xu hướng (EMA), động lượng (RSI, MACD), khối lượng và breakout 20 phiên;
+    sentiment tin tức chỉ điều chỉnh độ tin cậy ±10. Stop-loss/take-profit theo 2×/3× ATR14.</p>
+</section>
+<div class="cards">
+  {% for v in views %}
+    {% if v.signal %}{% include "_signal.html" %}{% else %}<article class="card"><h2>{{ v.symbol }}</h2><p>Chưa có tín hiệu.</p></article>{% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

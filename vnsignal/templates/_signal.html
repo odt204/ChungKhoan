@@ -1,0 +1,29 @@
+{# Thẻ tín hiệu hiện tại — dùng ở index và trang chi tiết. Biến: v #}
+{% set s = v.signal %}
+<article class="card signal-{{ s.signal | lower }}">
+  <div class="card-head">
+    <div>
+      <h2><a href="{{ v.symbol }}.html">{{ v.symbol }}</a> <span class="muted">{{ v.exchange }}</span></h2>
+      <p class="muted small">{{ v.name }}</p>
+    </div>
+    <span class="badge">{{ LABEL[s.signal] }}</span>
+  </div>
+  <p class="price">{{ s.close | vnd }}
+    {% if v.day_change is not none %}<span class="chg {{ 'up' if v.day_change > 0 else 'down' if v.day_change < 0 else '' }}">{{ v.day_change | spct(2) }}</span>{% endif %}
+  </p>
+  <p class="muted small">Phiên {{ s.date | date_vn }}</p>
+  <div class="conf" aria-label="Độ tin cậy {{ s.confidence }}/100">
+    <div class="conf-bar"><span style="width: {{ s.confidence }}%"></span></div>
+    <span class="conf-val">{{ s.confidence }}/100</span>
+  </div>
+  <p class="muted small">Độ tin cậy: kỹ thuật {{ s.confidence_raw }}, sentiment {{ s.window_days }} ngày
+    {{ s.sentiment | num }} ({{ s.n_news }} tin)</p>
+  <dl class="levels">
+    <div><dt>Stop-loss</dt><dd>{{ s.stop_loss | vnd }} <span class="muted">{{ v.sl_pct | spct }}</span></dd></div>
+    <div><dt>Take-profit</dt><dd>{{ s.take_profit | vnd }} <span class="muted">{{ v.tp_pct | spct }}</span></dd></div>
+    <div><dt>Tỷ trọng gợi ý</dt><dd>{% if s.signal == "BUY" %}tối đa {{ s.position_pct | pct }} vốn{% else %}—{% endif %}</dd></div>
+  </dl>
+  <ul class="reasons">
+    {% for r in s.reasons %}<li>{{ r }}</li>{% endfor %}
+  </ul>
+</article>

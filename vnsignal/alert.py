@@ -63,8 +63,8 @@ def _pct_from(price: float, ref: float) -> str:
     return f"{(price / ref - 1) * 100:+.1f}%"
 
 
-def snapshot(symbol: str, cfg: dict, capital: float, today) -> dict | None:
-    """Tín hiệu mới nhất của mã kèm confidence đã điều chỉnh theo sentiment và số cổ phiếu gợi ý."""
+def latest_signal(symbol: str, cfg: dict, today) -> dict | None:
+    """Tín hiệu mới nhất của mã kèm confidence đã điều chỉnh theo sentiment (không có số tiền)."""
     signals = read_csv(SIGNALS_DIR / f"{symbol}.csv")
     if signals.empty:
         return None
@@ -72,7 +72,6 @@ def snapshot(symbol: str, cfg: dict, capital: float, today) -> dict | None:
     ncfg = cfg["news"]
     sentiment, n_news = aggregate(read_jsonl(NEWS_DIR / f"{symbol}.jsonl"), today, ncfg["window_days"])
     confidence = adjust_confidence(row["signal"], int(row["confidence"]), sentiment, ncfg["max_confidence_adjust"])
-    shares = position_shares(capital, float(row["position_pct"]), float(row["close"]), cfg["trading"]["lot_size"])
     return {
         "symbol": symbol,
         "exchange": cfg["symbols"][symbol]["exchange"],
@@ -86,11 +85,19 @@ def snapshot(symbol: str, cfg: dict, capital: float, today) -> dict | None:
         "stop_loss": float(row["stop_loss"]),
         "take_profit": float(row["take_profit"]),
         "position_pct": float(row["position_pct"]),
-        "shares": shares,
-        "used_pct": shares * float(row["close"]) / capital,
         "reasons": row["reasons"].split(" | "),
         "window_days": ncfg["window_days"],
     }
+
+
+def snapshot(symbol: str, cfg: dict, capital: float, today) -> dict | None:
+    """latest_signal + số cổ phiếu gợi ý theo vốn (chỉ dùng trong message Telegram riêng tư)."""
+    s = latest_signal(symbol, cfg, today)
+    if s is None:
+        return None
+    s["shares"] = position_shares(capital, s["position_pct"], s["close"], cfg["trading"]["lot_size"])
+    s["used_pct"] = s["shares"] * s["close"] / capital
+    return s
 
 
 def _size_line(s: dict) -> str:

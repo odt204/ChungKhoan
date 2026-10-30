@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ v.symbol }} — VNSignal{% endblock %}
+{% block content %}
+<section class="detail-top">
+  {% if v.signal %}{% include "_signal.html" %}{% endif %}
+  <section class="panel">
+    <h2>Lịch sử đổi tín hiệu</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Phiên</th><th>Thay đổi</th><th class="r">Giá</th><th class="r">Tin cậy</th></tr></thead>
+        <tbody>
+        {% for c in v.changes %}
+          <tr><td>{{ c.date | date_vn }}</td>
+            <td class="nowrap">{{ LABEL[c["from"]] }} → <span class="tag tag-{{ c.to | lower }}">{{ LABEL[c.to] }}</span></td>
+            <td class="r">{{ c.close | vnd }}</td><td class="r">{{ c.confidence }}</td></tr>
+        {% else %}
+          <tr><td colspan="4" class="muted">Chưa có.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Biểu đồ giá</h2>
+    <div class="range" role="group" aria-label="Khoảng thời gian">
+      <button type="button" data-bars="66">3T</button>
+      <button type="button" data-bars="250">1N</button>
+      <button type="button" data-bars="750">3N</button>
+      <button type="button" data-bars="0">Tất cả</button>
+    </div>
+  </div>
+  <p class="legend small">
+    <span><span class="key k-fast"></span> EMA{{ v.chart.ema_periods[0] }}</span>
+    <span><span class="key k-mid"></span> EMA{{ v.chart.ema_periods[1] }}</span>
+    <span><span class="key k-slow"></span> EMA{{ v.chart.ema_periods[2] }}</span>
+    <span><span class="key k-buy"></span> Đổi sang MUA</span>
+    <span><span class="key k-sell"></span> Đổi sang BÁN</span>
+  </p>
+  <div id="chart-price" class="chart chart-main" role="img" aria-label="Biểu đồ nến {{ v.symbol }} với EMA, khối lượng và tín hiệu"></div>
+  <h3>RSI14</h3>
+  <div id="chart-rsi" class="chart chart-sub" role="img" aria-label="RSI14"></div>
+  <h3>MACD (12, 26, 9)</h3>
+  <div id="chart-macd" class="chart chart-sub" role="img" aria-label="MACD"></div>
+  <h3>ATR14</h3>
+  <div id="chart-atr" class="chart chart-sub" role="img" aria-label="ATR14"></div>
+  <p id="chart-error" class="error" hidden>Không tải được thư viện biểu đồ (cần kết nối Internet tới cdn.jsdelivr.net).</p>
+</section>
+
+<section class="panel">
+  <h2>Tin tức & sentiment</h2>
+  <ul class="news">
+  {% for n in v.news %}
+    <li>
+      <span class="sent {{ 'pos' if n.sentiment is not none and n.sentiment > 0 else 'neg' if n.sentiment is not none and n.sentiment < 0 else 'neu' }}"
+            title="{{ n.sentiment_reason or 'Chưa chấm điểm' }}">{{ '–' if n.sentiment is none else (n.sentiment | num) }}</span>
+      <div>
+        {% if n.url %}<a href="{{ n.url }}" rel="noopener noreferrer" target="_blank">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}
+        <p class="muted small">{{ n.published_at | date_vn }} · {{ n.source }}{% if n.sentiment_reason %} · {{ n.sentiment_reason }}{% endif %}</p>
+      </div>
+    </li>
+  {% else %}
+    <li class="muted">Chưa có tin.</li>
+  {% endfor %}
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Backtest</h2>
+  {% set b = v.backtest %}
+  {% if b %}
+  <p class="muted small">Khớp giá mở cửa phiên sau, T+2, phí 0,15% + thuế bán 0,1%, biên độ, lô 100; tối đa 35% vốn/lệnh.
+    Buy-and-hold dùng 100% vốn. Sinh lúc {{ b.generated_at }}.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Chiến lược</th><th>Kỳ</th><th class="r">Lệnh</th><th class="r">Win rate</th><th class="r">Profit factor</th>
+        <th class="r">CAGR</th><th class="r">Max DD</th><th class="r">Nắm giữ</th></tr></thead>
+      <tbody>
+      {% for r in b.rows %}
+        <tr class="{{ 'bh' if r.name.startswith('Buy') else '' }}"><td>{{ r.name }}</td>
+          <td class="nowrap">{{ r.start | date_vn }} → {{ r.end | date_vn }}</td>
+          <td class="r">{{ r.trades }}</td><td class="r">{{ r.win_rate | pct }}</td><td class="r">{{ r.profit_factor | pf }}</td>
+          <td class="r">{{ r.cagr | pct }}</td><td class="r">{{ r.max_drawdown | pct }}</td><td class="r">{{ r.exposure | pct }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Out-of-sample:</strong> {{ b.verdict_oos }}</p>
+  <p><strong>Toàn kỳ:</strong> {{ b.verdict_full }}</p>
+  {% else %}
+  <p class="muted">Chưa có kết quả backtest (chạy <code>python -m vnsignal.cli backtest</code>).</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script type="application/json" id="chart-data">{{ v.chart | tojson }}</script>
+<script src="{{ CHART_LIB }}"></script>
+<script src="assets/chart.js"></script>
+{% endblock %}

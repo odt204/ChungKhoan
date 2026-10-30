@@ -38,6 +38,7 @@ Mọi lệnh chạy qua một entry point:
 | `backtest` | Walk-forward (tối ưu 2020–2023, kiểm tra 2024–nay), ghi `reports/backtest_{symbol}.md` |
 | `news` | Tin VCI + RSS CafeF/Vietstock lọc theo mã, dedupe, chấm sentiment, ghi `data/news/{symbol}.jsonl` |
 | `alert [--summary]` | Telegram: chỉ gửi mã đổi tín hiệu so với `data/alert_state.json`; `--summary` gửi 1 tin tổng hợp mọi mã |
+| `build-site` | Sinh dashboard tĩnh vào `site/` (mở `site/index.html` bằng trình duyệt là xem được) |
 
 Test: `.\.venv\Scripts\python.exe -m pytest -q`
 
@@ -74,6 +75,23 @@ số cổ phiếu (làm tròn lô 100) chỉ tính lúc gửi alert bằng `CAPI
   lần chạy sau có key sẽ chấm bù.
 - Sentiment chỉ là **modifier**: trung bình điểm tin trong `window_days` ngày gần nhất × 10 cộng vào confidence
   theo hướng tín hiệu (BUY: tin tốt tăng; SELL: tin xấu tăng; HOLD: không đổi). Không bao giờ đổi BUY/SELL/HOLD.
+
+## Dashboard
+
+`build-site` sinh `site/` (không commit, chỉ deploy qua GitHub Actions):
+
+- `index.html`: 3 thẻ tín hiệu hiện tại; `{symbol}.html`: nến + EMA20/50/200 + volume + mũi tên khi đổi sang MUA/BÁN,
+  RSI14, MACD, ATR14 (đồng bộ cuộn/zoom), lịch sử đổi tín hiệu, tin tức kèm điểm sentiment, bảng backtest.
+- Dữ liệu chart nằm ở `site/data/{symbol}.json` và được nhúng sẵn vào trang, nên mở trực tiếp bằng `file://`
+  vẫn chạy (cần Internet để tải `lightweight-charts@4.2.3` từ jsDelivr).
+- Thuần HTML/CSS/JS, giao diện sáng/tối theo hệ điều hành, hiển thị tốt từ 375px. Không hiển thị vốn hay số tiền.
+
+Xem local:
+
+```powershell
+.\.venv\Scripts\python.exe -m vnsignal.cli build-site
+Start-Process site\index.html
+```
 
 ## Cảnh báo Telegram
 

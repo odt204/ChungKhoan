@@ -1,6 +1,6 @@
 # Backtest HVN
 
-_Sinh lúc 2026-10-30 09:52 (giờ VN) bằng `python -m vnsignal.cli backtest`. Số liệu là output thật của code._
+_Sinh lúc 2026-10-30 10:10 (giờ VN) bằng `python -m vnsignal.cli backtest`. Số liệu là output thật của code._
 
 ## Giả định
 

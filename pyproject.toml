@@ -16,6 +16,7 @@ dependencies = [
     "pandas==2.3.3",
     "requests==2.34.2",
     "anthropic==2.3.0",
+    "Jinja2==3.1.6",
     "PyYAML==6.0.3",
     "python-dotenv==1.2.4",
     "tzdata==2026.6",
@@ -23,6 +24,9 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest==9.2.0"]
+
+[tool.setuptools.package-data]
+vnsignal = ["templates/*.html", "static/*"]
 
 [tool.setuptools.packages.find]
 include = ["vnsignal*"]

@@ -1,0 +1,98 @@
+{
+  "generated_at": "2026-10-30 10:10",
+  "optimized_weights": {
+    "momentum": 1,
+    "support_resistance": 0.5,
+    "trend": 0,
+    "volume": 1
+  },
+  "rows": [
+    {
+      "cagr": 0.032356506452861034,
+      "end": "2023-12-29",
+      "exposure": 0.35830212234706615,
+      "max_drawdown": -0.037961039381893213,
+      "name": "Tối ưu — in-sample",
+      "profit_factor": 1.8687526475446539,
+      "start": "2020-10-20",
+      "total_return": 0.1069070558181251,
+      "trades": 24,
+      "win_rate": 0.5
+    },
+    {
+      "cagr": 0.01572712533224463,
+      "end": "2023-12-29",
+      "exposure": 1.0,
+      "max_drawdown": -0.36334804680631894,
+      "name": "Buy-and-hold — in-sample",
+      "profit_factor": "inf",
+      "start": "2020-10-20",
+      "total_return": 0.05103228000000004,
+      "trades": 1,
+      "win_rate": 1.0
+    },
+    {
+      "cagr": 0.025779138647223254,
+      "end": "2026-10-29",
+      "exposure": 0.36752136752136755,
+      "max_drawdown": -0.05877171613164511,
+      "name": "Tối ưu — out-of-sample",
+      "profit_factor": 1.4364558860303431,
+      "start": "2024-01-02",
+      "total_return": 0.0744890768712565,
+      "trades": 23,
+      "win_rate": 0.5652173913043478
+    },
+    {
+      "cagr": 0.01888560033289921,
+      "end": "2026-10-29",
+      "exposure": 1.0,
+      "max_drawdown": -0.5149920359059144,
+      "name": "Buy-and-hold — out-of-sample",
+      "profit_factor": "inf",
+      "start": "2024-01-02",
+      "total_return": 0.05423112000000008,
+      "trades": 1,
+      "win_rate": 1.0
+    },
+    {
+      "cagr": 0.0073377352632013615,
+      "end": "2026-10-29",
+      "exposure": 0.34464404524284764,
+      "max_drawdown": -0.06297663231578066,
+      "name": "Config — toàn kỳ",
+      "profit_factor": 1.1708805013836532,
+      "start": "2020-10-20",
+      "total_return": 0.0450197750111998,
+      "trades": 36,
+      "win_rate": 0.4722222222222222
+    },
+    {
+      "cagr": 0.011981340076350211,
+      "end": "2026-10-29",
+      "exposure": 1.0,
+      "max_drawdown": -0.5311867322043737,
+      "name": "Buy-and-hold — toàn kỳ",
+      "profit_factor": "inf",
+      "start": "2020-10-20",
+      "total_return": 0.07437377999999994,
+      "trades": 1,
+      "win_rate": 1.0
+    },
+    {
+      "cagr": 0.014596005143212576,
+      "end": "2026-10-29",
+      "exposure": 0.25071225071225073,
+      "max_drawdown": -0.06316212797192211,
+      "name": "Config — out-of-sample",
+      "profit_factor": 1.2953928708114961,
+      "start": "2024-01-02",
+      "total_return": 0.04175074787456046,
+      "trades": 19,
+      "win_rate": 0.47368421052631576
+    }
+  ],
+  "symbol": "ACV",
+  "verdict_full": "CAGR 0.7% vs buy-and-hold 1.2% → THUA buy-and-hold về lợi nhuận; max drawdown -6.3% (thấp hơn mức -53.1% của buy-and-hold).",
+  "verdict_oos": "CAGR 2.6% vs buy-and-hold 1.9% → THẮNG buy-and-hold về lợi nhuận; max drawdown -5.9% (thấp hơn mức -51.5% của buy-and-hold)."
+}
