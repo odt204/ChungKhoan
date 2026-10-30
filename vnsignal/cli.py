@@ -62,9 +62,11 @@ def cmd_backfill(cfg: dict, symbols: list[str], force: bool) -> None:
     _summary(symbols)
 
 
-def cmd_eod(cfg: dict, symbols: list[str]) -> None:
+def cmd_eod(cfg: dict, symbols: list[str]) -> int:
+    """Trả về tổng số nến mới (theo ngày chưa có trong file) đã thêm."""
     source = get_source(cfg["data_source"])
     tol = cfg["adjustment_tolerance"]
+    total_added = 0
     for symbol in symbols:
         path = OHLCV_DIR / f"{symbol}.csv"
         old = read_csv(path)
@@ -79,6 +81,7 @@ def cmd_eod(cfg: dict, symbols: list[str]) -> None:
             log.warning("%s: giá cũ lệch %.2f%% (cổ tức/chia tách?) → tải lại toàn bộ lịch sử", symbol, drift * 100)
             fetched = _fetch_final(source, cfg, symbol, date.fromisoformat(cfg["start_date"]))
             added, changed = upsert_csv(path, fetched)
+            total_added += added
             log.info("%s: tải lại %d nến, thêm %d, cập nhật %d", symbol, len(fetched), added, changed)
             continue
 
@@ -87,8 +90,10 @@ def cmd_eod(cfg: dict, symbols: list[str]) -> None:
             log.info("%s: đã có nến mới nhất %s, bỏ qua", symbol, last)
             continue
         added, _ = upsert_csv(path, new)
+        total_added += added
         log.info("%s: thêm %d nến (%s)", symbol, added, ", ".join(new["date"]))
     _summary(symbols)
+    return total_added
 
 
 def cmd_fundamentals(cfg: dict, symbols: list[str]) -> None:
@@ -225,6 +230,38 @@ def cmd_build_site(cfg: dict) -> None:
         log.info("    %s (%.0f KB)", p.relative_to(ROOT).as_posix(), p.stat().st_size / 1024)
 
 
+def cmd_run_daily(cfg: dict, force_backfill: bool) -> None:
+    """Chuỗi hằng ngày: (backfill nếu thiếu) → eod → fundamentals → signals → news → alert → build-site.
+    eod / signals / build-site lỗi → dừng (exit 1). fundamentals / news / alert lỗi → log, chạy tiếp."""
+    symbols = list(cfg["symbols"])
+    soft_failed = []
+
+    def soft(name, fn, *args):
+        log.info("── %s", name)
+        try:
+            fn(*args)
+        except Exception:
+            log.exception("%s lỗi — bỏ qua, chạy tiếp", name)
+            soft_failed.append(name)
+
+    log.info("── backfill%s", " (--force)" if force_backfill else "")
+    cmd_backfill(cfg, symbols, force_backfill)
+    log.info("── eod")
+    new_bars = cmd_eod(cfg, symbols)
+    soft("fundamentals", cmd_fundamentals, cfg, symbols)
+    log.info("── signals")
+    cmd_signals(cfg, symbols)
+    soft("news", cmd_news, cfg, symbols)
+    # Ngày nghỉ (không có nến mới): chỉ báo khi tín hiệu đổi, không gửi lại bản tổng hợp cũ.
+    soft("alert", cmd_alert, cfg, symbols, new_bars > 0 or force_backfill)
+    log.info("── build-site")
+    cmd_build_site(cfg)
+    if soft_failed:
+        log.warning("run-daily xong, có bước lỗi (đã bỏ qua): %s", ", ".join(soft_failed))
+    else:
+        log.info("run-daily xong (%d nến mới)", new_bars)
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(ROOT / ".env")
     _setup_logging()
@@ -248,6 +285,8 @@ def main(argv: list[str] | None = None) -> int:
         if name == "alert":
             p.add_argument("--summary", action="store_true", help="Gửi bản tổng hợp mọi mã dù tín hiệu không đổi")
     sub.add_parser("build-site", help="Sinh dashboard tĩnh vào site/ (mở được bằng file://)")
+    p = sub.add_parser("run-daily", help="eod → signals → news → alert --summary → build-site")
+    p.add_argument("--backfill", action="store_true", help="Tải lại toàn bộ lịch sử OHLCV trước khi chạy")
     args = parser.parse_args(argv)
 
     try:
@@ -267,6 +306,8 @@ def main(argv: list[str] | None = None) -> int:
             cmd_alert(cfg, args.symbols, args.summary)
         elif args.command == "build-site":
             cmd_build_site(cfg)
+        elif args.command == "run-daily":
+            cmd_run_daily(cfg, args.backfill)
     except Exception:
         log.exception("Lệnh `%s` lỗi", args.command)
         return 1

@@ -39,6 +39,10 @@ Mọi lệnh chạy qua một entry point:
 | `news` | Tin VCI + RSS CafeF/Vietstock lọc theo mã, dedupe, chấm sentiment, ghi `data/news/{symbol}.jsonl` |
 | `alert [--summary]` | Telegram: chỉ gửi mã đổi tín hiệu so với `data/alert_state.json`; `--summary` gửi 1 tin tổng hợp mọi mã |
 | `build-site` | Sinh dashboard tĩnh vào `site/` (mở `site/index.html` bằng trình duyệt là xem được) |
+| `run-daily [--backfill]` | Cả chuỗi: backfill (nếu thiếu) → eod → fundamentals → signals → news → alert → build-site |
+
+`run-daily`: eod / signals / build-site lỗi thì dừng (exit 1); fundamentals / news / alert lỗi thì log và chạy tiếp.
+Có nến mới → gửi Telegram bản tổng hợp (`alert --summary`); ngày nghỉ (không có nến mới) → chỉ gửi khi tín hiệu đổi.
 
 Test: `.\.venv\Scripts\python.exe -m pytest -q`
 
@@ -150,6 +154,13 @@ từ artifact của workflow `daily`.
 1. Tab **Actions** → nếu GitHub hỏi, bấm bật workflows cho repo.
 2. Chọn **smoke-vci** → **Run workflow** (nhánh `main`). Workflow này chỉ kiểm tra runner GitHub (ở nước ngoài)
    gọi được VCI, CafeF, Vietstock và cài được vnstock. Phải xanh trước khi dùng workflow `daily`.
+3. Chọn **daily** → **Run workflow** (để `backfill` tắt, vì data đã có trong repo). Workflow chạy `run-daily`,
+   commit thay đổi trong `data/` bằng `github-actions[bot]`, rồi deploy `site/` lên Pages.
+4. Dashboard: `https://<user>.github.io/<repo>/` (link cũng hiện ở job **deploy** và Settings → Pages).
+
+Sau đó `daily` tự chạy lúc `cron: "20 8 * * 1-5"` = 08:20 UTC = **15:20 giờ VN, thứ Hai–thứ Sáu**. Ngày lễ VN
+không có nến mới: workflow vẫn chạy nhưng không đổi data và không gửi bản tổng hợp.
+Chọn `backfill = true` khi chạy tay để tải lại toàn bộ lịch sử từ 2020-01-01 (ví dụ sau khi xoá data).
 
 ### Lưu ý về GitHub Actions
 
