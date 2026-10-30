@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}VNSignal{% endblock %}</title>
-<meta name="description" content="Tín hiệu MUA/BÁN/GIỮ tham khảo cho FPT, ACV, HVN — cập nhật sau mỗi phiên.">
+<meta name="description" content="Tín hiệu MUA/BÁN/GIỮ tham khảo cho FPT, ACV, HVN — cập nhật sau mỗi phiên, giải thích dễ hiểu.">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
@@ -13,15 +13,16 @@
   <nav>
     <a href="index.html" {% if active == "index" %}aria-current="page"{% endif %}>Tổng quan</a>
     {% for s in symbols %}<a href="{{ s }}.html" {% if active == s %}aria-current="page"{% endif %}>{{ s }}</a>{% endfor %}
+    <a href="huong-dan.html" {% if active == "guide" %}aria-current="page"{% endif %}>Hướng dẫn</a>
   </nav>
 </header>
 <main>
 {% block content %}{% endblock %}
 </main>
 <footer>
-  <p><strong>{{ DISCLAIMER }}</strong></p>
-  <p>Cập nhật {{ generated_at }} (giờ Việt Nam). Dữ liệu giá: VCI (giá đã điều chỉnh). Tin tức: VCI, CafeF, Vietstock;
-    sentiment chấm bằng Claude. Không có chức năng đặt lệnh.</p>
+  <p class="disclaimer"><strong>{{ DISCLAIMER }}</strong> Mọi quyết định mua bán là của bạn.</p>
+  <p>Cập nhật {{ generated_at }} (giờ Việt Nam). Giá: VCI (giá đã điều chỉnh cổ tức). Tin tức: VCI, CafeF, Vietstock;
+    đánh giá tin tức bằng AI (Claude). Không có chức năng đặt lệnh.</p>
 </footer>
 {% block scripts %}{% endblock %}
 </body>

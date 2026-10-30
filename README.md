@@ -94,8 +94,10 @@ số cổ phiếu (làm tròn lô 100) chỉ tính lúc gửi alert bằng `CAPI
 
 `build-site` sinh `site/` (không commit, chỉ deploy qua GitHub Actions):
 
-- `index.html`: 3 thẻ tín hiệu hiện tại; `{symbol}.html`: nến + EMA20/50/200 + volume + mũi tên khi đổi sang MUA/BÁN,
-  RSI14, MACD, ATR14 (đồng bộ cuộn/zoom), lịch sử đổi tín hiệu, tin tức kèm điểm sentiment, bảng backtest.
+- Viết cho người mới: mỗi thẻ có gợi ý hành động bằng lời thường, độ mạnh (Yếu/Trung bình/Mạnh), 4 dòng "Vì sao?"
+  diễn giải chỉ báo; trang `huong-dan.html` giải thích thuật ngữ, quy tắc T+2/lô/biên độ và giới hạn của hệ thống.
+- `index.html`: 3 thẻ tín hiệu; `{symbol}.html`: so sánh làm-theo-tín-hiệu vs mua-và-giữ, nến + đường trung bình
+  + volume + mũi tên đổi tín hiệu, RSI/MACD/ATR có chú thích, tin tức gắn nhãn Tích cực/Tiêu cực, chi tiết kỹ thuật thu gọn.
 - Dữ liệu chart nằm ở `site/data/{symbol}.json` và được nhúng sẵn vào trang, nên mở trực tiếp bằng `file://`
   vẫn chạy (cần Internet để tải `lightweight-charts@4.2.3` từ jsDelivr).
 - Thuần HTML/CSS/JS, giao diện sáng/tối theo hệ điều hành, hiển thị tốt từ 375px. Không hiển thị vốn hay số tiền.

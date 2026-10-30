@@ -1,14 +1,34 @@
 {% extends "base.html" %}
 {% block title %}VNSignal — Tín hiệu FPT, ACV, HVN{% endblock %}
 {% block content %}
-<section class="intro">
-  <h1>Tín hiệu hiện tại</h1>
-  <p class="muted">Điểm tổng hợp từ xu hướng (EMA), động lượng (RSI, MACD), khối lượng và breakout 20 phiên;
-    sentiment tin tức chỉ điều chỉnh độ tin cậy ±10. Stop-loss/take-profit theo 2×/3× ATR14.</p>
+<section class="hero">
+  <h1>Tín hiệu hôm nay cho FPT, ACV, HVN</h1>
+  <p>VNSignal đọc giá và tin tức sau mỗi phiên, rồi gợi ý <strong>MUA</strong>, <strong>BÁN</strong> hoặc
+    <strong>GIỮ</strong> kèm lý do dễ hiểu. Đây là công cụ tham khảo, không đặt lệnh hộ bạn.</p>
+  <div class="chips">
+    <span class="chip">Phiên {% for d in sessions %}{{ d | date_vn }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+    <span class="chip chip-buy">{{ counts.BUY }} MUA</span>
+    <span class="chip chip-sell">{{ counts.SELL }} BÁN</span>
+    <span class="chip chip-hold">{{ counts.HOLD }} GIỮ</span>
+  </div>
+  <p class="muted small">Giá là <strong>giá đóng cửa</strong>, cập nhật khoảng 15:20 mỗi ngày giao dịch — không phải giá trực tiếp.
+    Lần đầu dùng? <a href="huong-dan.html">Đọc hướng dẫn 2 phút →</a></p>
 </section>
+
 <div class="cards">
   {% for v in views %}
-    {% if v.signal %}{% include "_signal.html" %}{% else %}<article class="card"><h2>{{ v.symbol }}</h2><p>Chưa có tín hiệu.</p></article>{% endif %}
+    {% if v.signal %}{% with link = true %}{% include "_signal.html" %}{% endwith %}
+    {% else %}<article class="card"><h2>{{ v.symbol }}</h2><p>Chưa có tín hiệu.</p></article>{% endif %}
   {% endfor %}
 </div>
+
+<section class="panel legend-panel">
+  <h2>Cách đọc nhanh</h2>
+  <div class="legend-grid">
+    <div><span class="tag tag-buy">MUA</span><p>Các chỉ báo ủng hộ chiều tăng. Có thể cân nhắc mua, luôn đặt mức cắt lỗ.</p></div>
+    <div><span class="tag tag-sell">BÁN</span><p>Các chỉ báo nghiêng về giảm. Đang giữ thì cân nhắc bán; chưa có thì chưa nên mua.</p></div>
+    <div><span class="tag tag-hold">GIỮ</span><p>Chưa có tín hiệu rõ. Đang giữ thì theo dõi tiếp; chưa có thì đứng ngoài chờ.</p></div>
+    <div><span class="tag">Độ mạnh</span><p>0–100: dưới 30 là yếu, 30–59 trung bình, từ 60 là mạnh. Tin tức chỉ cộng/trừ tối đa 10 điểm.</p></div>
+  </div>
+</section>
 {% endblock %}

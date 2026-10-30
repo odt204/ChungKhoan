@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from vnsignal import indicators
+from vnsignal import explain, indicators
 from vnsignal.alert import DISCLAIMER, LABEL, latest_signal
 from vnsignal.config import FUNDAMENTALS_DIR, NEWS_DIR, OHLCV_DIR, REPORTS_DIR, ROOT, SIGNALS_DIR
 from vnsignal.store import read_csv, read_json, read_jsonl
@@ -28,9 +28,9 @@ def _num(x, digits: int):
     return round(float(x), digits) if digits else int(round(float(x)))
 
 
-def chart_data(symbol: str, ohlcv: pd.DataFrame, signals: pd.DataFrame, cfg: dict) -> dict:
-    """Dữ liệu chart dạng cột (gọn): giá, volume, EMA, RSI, MACD, ATR, marker đổi tín hiệu."""
-    ind = indicators.compute(ohlcv, cfg)
+def chart_data(symbol: str, ind: pd.DataFrame, signals: pd.DataFrame, cfg: dict) -> dict:
+    """Dữ liệu chart dạng cột (gọn): giá, volume, EMA, RSI, MACD, ATR, marker đổi tín hiệu.
+    `ind` là output của indicators.compute."""
     col = lambda name, d: [_num(v, d) for v in ind[name]]  # noqa: E731
     f, m, s = cfg["signals"]["ema"]
     return {
@@ -60,32 +60,21 @@ def signal_changes(signals: pd.DataFrame) -> list[dict]:
     ]
 
 
-def _vn_num(x: float, digits: int = 0) -> str:
-    s = f"{x:,.{digits}f}"
-    return s.replace(",", "§").replace(".", ",").replace("§", ".")
-
-
-def _pct(x, digits: int = 1, sign: bool = False) -> str:
-    if x == "inf":
-        return "∞"
-    if x is None:
-        return "–"
-    prefix = "+" if sign and x > 0 else ""
-    return f"{prefix}{_vn_num(x * 100, digits)}%"
-
-
 def _date_vn(d: str) -> str:
     return datetime.fromisoformat(d[:10]).strftime("%d/%m/%Y") if d else ""
 
 
 def _env() -> Environment:
     env = Environment(loader=FileSystemLoader(PKG_DIR / "templates"), autoescape=select_autoescape(["html"]))
-    env.filters["vnd"] = lambda x: _vn_num(float(x))
-    env.filters["num"] = lambda x, d=2: _vn_num(float(x), d)
-    env.filters["pct"] = _pct
-    env.filters["spct"] = lambda x, d=1: _pct(x, d, sign=True)
+    env.filters["vnd"] = lambda x: explain.vn_num(float(x))
+    env.filters["num"] = lambda x, d=2: explain.vn_num(float(x), d)
+    env.filters["pct"] = explain.vn_pct
+    env.filters["spct"] = lambda x, d=1: explain.vn_pct(x, d, sign=True)
     env.filters["date_vn"] = _date_vn
-    env.filters["pf"] = lambda x: "∞" if x == "inf" else ("–" if x is None else _vn_num(x, 2))
+    env.filters["pf"] = lambda x: "∞" if x == "inf" else ("–" if x is None else explain.vn_num(x, 2))
+    env.filters["sent_label"] = explain.sentiment_label
+    env.filters["sent_class"] = explain.sentiment_class
+    env.filters["conf_label"] = explain.confidence_label
     env.globals.update(LABEL=LABEL, DISCLAIMER=DISCLAIMER, CHART_LIB=CHART_LIB)
     return env
 
@@ -97,18 +86,27 @@ def symbol_view(symbol: str, cfg: dict, today) -> dict:
     prev_close = float(ohlcv["close"].iloc[-2]) if len(ohlcv) > 1 else None
     fundamentals = read_json(FUNDAMENTALS_DIR / f"{symbol}.json") or {}
     news = sorted(read_jsonl(NEWS_DIR / f"{symbol}.jsonl"), key=lambda r: r.get("published_at") or "", reverse=True)
+    ind = indicators.compute(ohlcv, cfg)
+    sl_pct = (sig["stop_loss"] / sig["close"] - 1) if sig else None
+    tp_pct = (sig["take_profit"] / sig["close"] - 1) if sig else None
+    backtest = read_json(REPORTS_DIR / f"backtest_{symbol}.json")
     return {
         "symbol": symbol,
         "exchange": cfg["symbols"][symbol]["exchange"],
+        "price_limit": cfg["exchanges"][cfg["symbols"][symbol]["exchange"]]["price_limit"],
         "name": (fundamentals.get("overview") or {}).get("organ_name") or symbol,
         "signal": sig,
         "day_change": (sig["close"] / prev_close - 1) if sig and prev_close else None,
-        "sl_pct": (sig["stop_loss"] / sig["close"] - 1) if sig else None,
-        "tp_pct": (sig["take_profit"] / sig["close"] - 1) if sig else None,
+        "sl_pct": sl_pct,
+        "tp_pct": tp_pct,
+        "action": explain.action(sig, sl_pct, tp_pct) if sig else None,
+        "plain": explain.plain_reasons(ind.iloc[-1], cfg),
+        "sentiment_effect": (sig["confidence"] - sig["confidence_raw"]) if sig else 0,
         "changes": list(reversed(signal_changes(signals)))[:CHANGES_ON_PAGE],
         "news": news[:NEWS_ON_PAGE],
-        "backtest": read_json(REPORTS_DIR / f"backtest_{symbol}.json"),
-        "chart": chart_data(symbol, ohlcv, signals, cfg),
+        "backtest": backtest,
+        "backtest_plain": explain.backtest_plain(backtest),
+        "chart": chart_data(symbol, ind, signals, cfg),
     }
 
 
@@ -132,7 +130,12 @@ def build(cfg: dict, out_dir: Path, today, generated_at: str) -> list[Path]:
         page.write_text(env.get_template("symbol.html").render(v=v, active=v["symbol"], **common), encoding="utf-8")
         written += [data_path, page]
 
+    counts = {k: sum(1 for v in views if v["signal"] and v["signal"]["signal"] == k) for k in ("BUY", "SELL", "HOLD")}
+    sessions = sorted({v["signal"]["date"] for v in views if v["signal"]})
     index = out_dir / "index.html"
-    index.write_text(env.get_template("index.html").render(views=views, active="index", **common), encoding="utf-8")
-    written.append(index)
+    index.write_text(env.get_template("index.html").render(
+        views=views, counts=counts, sessions=sessions, active="index", **common), encoding="utf-8")
+    guide = out_dir / "huong-dan.html"
+    guide.write_text(env.get_template("guide.html").render(cfg=cfg, active="guide", **common), encoding="utf-8")
+    written += [index, guide]
     return written

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Hướng dẫn — VNSignal{% endblock %}
+{% block content %}
+<article class="guide">
+  <h1>Hướng dẫn cho người mới</h1>
+  <p class="lead">Đọc trong khoảng 2 phút. Trang này giải thích VNSignal làm gì, cách đọc một thẻ tín hiệu,
+    và những giới hạn bạn cần biết trước khi dùng.</p>
+
+  <section>
+    <h2>1. VNSignal làm gì?</h2>
+    <p>Sau mỗi phiên giao dịch (khoảng 15:20), hệ thống lấy giá đóng cửa của <strong>FPT, ACV, HVN</strong>, đọc tin tức,
+      rồi chấm điểm theo 4 yếu tố: xu hướng giá, đà tăng/giảm, dòng tiền (khối lượng) và việc giá có vượt đỉnh/thủng đáy
+      gần đây không. Từ điểm đó, hệ thống đưa ra một trong ba tín hiệu.</p>
+    <div class="legend-grid">
+      <div><span class="tag tag-buy">MUA</span><p>Các yếu tố đang ủng hộ chiều tăng.</p></div>
+      <div><span class="tag tag-sell">BÁN</span><p>Các yếu tố nghiêng về giảm.</p></div>
+      <div><span class="tag tag-hold">GIỮ</span><p>Chưa đủ rõ ràng để mua hay bán.</p></div>
+    </div>
+    <p>VNSignal <strong>không</strong> đặt lệnh, không kết nối tài khoản chứng khoán, và không biết bạn đang giữ bao nhiêu cổ phiếu.</p>
+  </section>
+
+  <section>
+    <h2>2. Đọc một thẻ tín hiệu</h2>
+    <dl class="terms">
+      <dt>Giá đóng cửa</dt>
+      <dd>Giá chốt cuối phiên gần nhất. Không phải giá trực tiếp — trong giờ giao dịch, app của công ty chứng khoán
+        sẽ hiện giá khác.</dd>
+      <dt>Độ mạnh (0–100)</dt>
+      <dd>Các yếu tố đồng thuận đến đâu. Dưới 30: yếu, 30–59: trung bình, từ 60: mạnh. Tin tức tốt/xấu chỉ cộng
+        hoặc trừ tối đa 10 điểm.</dd>
+      <dt>Mức cắt lỗ</dt>
+      <dd>Nếu giá xuống dưới mức này, nên bán để tránh lỗ thêm. Được tính bằng giá hiện tại trừ 2 lần mức dao động
+        trung bình mỗi phiên.</dd>
+      <dt>Mức chốt lời</dt>
+      <dd>Vùng giá có thể cân nhắc bán để lấy lãi (giá hiện tại cộng 3 lần mức dao động trung bình).</dd>
+      <dt>Vốn tối đa</dt>
+      <dd>Phần trăm tổng vốn nên dùng cho mã này khi có tín hiệu MUA: không quá 35%, và nếu chạm cắt lỗ thì chỉ mất
+        khoảng 2% tổng vốn.</dd>
+      <dt>Vì sao?</dt>
+      <dd>4 dòng giải thích tình trạng của từng yếu tố: ▲ ủng hộ tăng, ▼ ủng hộ giảm, ● trung tính.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>3. Quy tắc thị trường Việt Nam nên nhớ</h2>
+    <ul>
+      <li><strong>T+2:</strong> mua ngày T thì sớm nhất phiên chiều ngày T+2 (2 ngày giao dịch sau) mới bán được.</li>
+      <li><strong>Lô 100:</strong> mua bán theo bội số 100 cổ phiếu.</li>
+      <li><strong>Biên độ:</strong> HOSE (FPT, HVN) tối đa ±7% mỗi phiên; UPCOM (ACV) ±15%.</li>
+      <li><strong>Giờ giao dịch:</strong> HOSE 9:00–11:30 và 13:00–14:45 (14:30–14:45 là phiên đóng cửa ATC);
+        UPCOM 9:00–15:00.</li>
+      <li><strong>Phí:</strong> hệ thống tính khoảng 0,15% mỗi lần mua/bán và 0,1% thuế khi bán. Phí thực tế tuỳ công ty chứng khoán.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Đọc biểu đồ</h2>
+    <ul>
+      <li><strong>Nến:</strong> mỗi cây là một phiên; xanh là tăng, đỏ là giảm. Thân nến từ giá mở cửa đến giá đóng cửa,
+        râu nến là giá cao/thấp nhất.</li>
+      <li><strong>Đường trung bình (TB 20/50/200 phiên):</strong> giá trung bình gần đây. Giá trên các đường = xu hướng tăng,
+        dưới = xu hướng giảm. Đường 200 phiên phản ánh xu hướng dài hạn (~10 tháng).</li>
+      <li><strong>Mũi tên:</strong> ngày hệ thống đổi sang MUA (▲) hoặc BÁN (▼).</li>
+      <li><strong>RSI:</strong> trên 70 là tăng quá nóng, dưới 30 là giảm quá mạnh.</li>
+      <li><strong>MACD:</strong> cột xanh là đà tăng, cột đỏ là đà giảm.</li>
+      <li><strong>ATR:</strong> giá thường dao động bao nhiêu đồng mỗi phiên — dùng để đặt cắt lỗ/chốt lời.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. Giới hạn — hãy đọc kỹ</h2>
+    <ul>
+      <li>Kiểm định trên dữ liệu 2020 đến nay cho thấy làm theo tín hiệu <strong>thường lãi ít hơn</strong> so với mua rồi giữ
+        nguyên, nhưng lúc thua lỗ thì <strong>lỗ ít hơn nhiều</strong>. Mỗi trang mã có phần "Nếu làm theo tín hiệu trước đây thì sao?"
+        ghi số liệu thật.</li>
+      <li>Tín hiệu chỉ dựa trên giá, khối lượng và tin tức; không phân tích báo cáo tài chính hay định giá doanh nghiệp.</li>
+      <li>Dữ liệu từ nguồn công khai không chính thức (VCI), có thể chậm hoặc sai. Giá quá khứ đã điều chỉnh theo cổ tức
+        nên có thể khác giá bạn nhớ.</li>
+      <li>Đánh giá tin tức do AI thực hiện, có thể hiểu sai nội dung.</li>
+    </ul>
+    <p class="disclaimer"><strong>{{ DISCLAIMER }}</strong> Hãy tự tìm hiểu và chỉ đầu tư số tiền bạn chấp nhận được rủi ro.</p>
+  </section>
+</article>
+{% endblock %}

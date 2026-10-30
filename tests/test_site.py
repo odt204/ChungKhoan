@@ -28,6 +28,8 @@ def test_build_site_from_committed_data(tmp_path, monkeypatch):
 
     index = (out / "index.html").read_text(encoding="utf-8")
     assert index.count('class="card signal-') == 3
+    assert 'href="huong-dan.html"' in index and (out / "huong-dan.html").exists()
+    assert "Giá đóng cửa phiên" in index
     assert "Đây là tín hiệu tham khảo, không phải khuyến nghị đầu tư." in index
     assert 'href="assets/site.css"' in index  # đường dẫn tương đối → chạy được với file://
 
@@ -41,7 +43,8 @@ def test_build_site_from_committed_data(tmp_path, monkeypatch):
         n = len(data["t"])
         assert all(len(data[k]) == n for k in ["o", "h", "l", "c", "v", "ema_fast", "rsi", "macd", "atr"])
         assert all(m["s"] in ("BUY", "SELL") for m in data["markers"])
-        assert "Backtest" in page and "Tin tức" in page
+        assert "Nếu làm theo tín hiệu trước đây thì sao?" in page and "Tin tức gần đây" in page
+        assert "Vì sao?" in page and 'class="callout"' in page
 
     # Không lộ vốn / số tiền tuyệt đối
     for f in out.rglob("*"):
