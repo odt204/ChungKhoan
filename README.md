@@ -37,6 +37,7 @@ Mọi lệnh chạy qua một entry point:
 | `signals` | Tính tín hiệu BUY/SELL/HOLD cho toàn bộ lịch sử, ghi `data/signals/{symbol}.csv` |
 | `backtest` | Walk-forward (tối ưu 2020–2023, kiểm tra 2024–nay), ghi `reports/backtest_{symbol}.md` |
 | `news` | Tin VCI + RSS CafeF/Vietstock lọc theo mã, dedupe, chấm sentiment, ghi `data/news/{symbol}.jsonl` |
+| `alert [--summary]` | Telegram: chỉ gửi mã đổi tín hiệu so với `data/alert_state.json`; `--summary` gửi 1 tin tổng hợp mọi mã |
 
 Test: `.\.venv\Scripts\python.exe -m pytest -q`
 
@@ -73,6 +74,15 @@ số cổ phiếu (làm tròn lô 100) chỉ tính lúc gửi alert bằng `CAPI
   lần chạy sau có key sẽ chấm bù.
 - Sentiment chỉ là **modifier**: trung bình điểm tin trong `window_days` ngày gần nhất × 10 cộng vào confidence
   theo hướng tín hiệu (BUY: tin tốt tăng; SELL: tin xấu tăng; HOLD: không đổi). Không bao giờ đổi BUY/SELL/HOLD.
+
+## Cảnh báo Telegram
+
+- Gửi qua Bot API `sendMessage` với `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`. Thiếu env → warning, không gửi, lệnh không lỗi.
+- `alert`: so tín hiệu mới nhất với `data/alert_state.json`, chỉ gửi mã đổi trạng thái (mã chưa có trong state
+  coi như đổi). State của một mã chỉ cập nhật khi gửi thành công → gửi lỗi sẽ thử lại lần chạy sau.
+- `alert --summary`: một tin tổng hợp mọi mã (đánh dấu mã đổi tín hiệu), gửi kể cả khi không đổi.
+- Message có giá đóng cửa, SL, TP, khối lượng (số cổ phiếu tính từ `CAPITAL_VND`, làm tròn lô 100, chỉ cho MUA),
+  độ tin cậy sau sentiment, 3 lý do; dòng cuối: "Đây là tín hiệu tham khảo, không phải khuyến nghị đầu tư."
 
 Ghi chú về dữ liệu VCI:
 

@@ -9,7 +9,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from vnsignal.config import (
-    FUNDAMENTALS_DIR, NEWS_DIR, OHLCV_DIR, REPORTS_DIR, ROOT, SIGNALS_DIR, capital_vnd, load_config, now_vn,
+    ALERT_STATE_FILE, FUNDAMENTALS_DIR, NEWS_DIR, OHLCV_DIR, REPORTS_DIR, ROOT, SIGNALS_DIR, capital_vnd, load_config, now_vn,
 )
 from vnsignal.data import get_source
 from vnsignal.market import drop_unfinished_bars
@@ -197,6 +197,22 @@ def cmd_news(cfg: dict, symbols: list[str]) -> None:
         raise RuntimeError("Mọi nguồn tin đều lỗi")
 
 
+def cmd_alert(cfg: dict, symbols: list[str], summary: bool) -> None:
+    from vnsignal import alert
+    from vnsignal.store import read_json
+
+    path = ALERT_STATE_FILE
+    state = read_json(path) or {}
+    sender = alert.telegram_sender()
+    now = now_vn()
+    new_state, sent = alert.run(
+        cfg, symbols, state, sender, capital_vnd(), now.date(), summary, now.isoformat(timespec="seconds")
+    )
+    written = write_json(path, new_state)
+    log.info("Alert%s: đã gửi %d message, alert_state %s", " (tổng hợp)" if summary else "", sent,
+             "cập nhật" if written else "không đổi")
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(ROOT / ".env")
     _setup_logging()
@@ -211,11 +227,14 @@ def main(argv: list[str] | None = None) -> int:
         ("signals", "Tính tín hiệu BUY/SELL/HOLD, ghi data/signals/{symbol}.csv"),
         ("backtest", "Backtest walk-forward, ghi reports/backtest_{symbol}.md"),
         ("news", "Thu thập tin (VCI + RSS CafeF/Vietstock), chấm sentiment, ghi data/news/{symbol}.jsonl"),
+        ("alert", "Gửi Telegram khi tín hiệu đổi trạng thái (so với data/alert_state.json)"),
     ]:
         p = sub.add_parser(name, help=help_text)
         p.add_argument("--symbols", nargs="+", choices=list(cfg["symbols"]), default=list(cfg["symbols"]))
         if name == "backfill":
             p.add_argument("--force", action="store_true", help="Tải lại toàn bộ kể cả khi đã có dữ liệu")
+        if name == "alert":
+            p.add_argument("--summary", action="store_true", help="Gửi bản tổng hợp mọi mã dù tín hiệu không đổi")
     args = parser.parse_args(argv)
 
     try:
@@ -231,6 +250,8 @@ def main(argv: list[str] | None = None) -> int:
             cmd_backtest(cfg, args.symbols)
         elif args.command == "news":
             cmd_news(cfg, args.symbols)
+        elif args.command == "alert":
+            cmd_alert(cfg, args.symbols, args.summary)
     except Exception:
         log.exception("Lệnh `%s` lỗi", args.command)
         return 1

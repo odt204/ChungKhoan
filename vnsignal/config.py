@@ -14,6 +14,7 @@ OHLCV_DIR = DATA_DIR / "ohlcv"
 FUNDAMENTALS_DIR = DATA_DIR / "fundamentals"
 SIGNALS_DIR = DATA_DIR / "signals"
 NEWS_DIR = DATA_DIR / "news"
+ALERT_STATE_FILE = DATA_DIR / "alert_state.json"
 REPORTS_DIR = ROOT / "reports"
 
 TZ = ZoneInfo("Asia/Ho_Chi_Minh")
