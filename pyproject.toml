@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vnsignal"
+version = "0.1.0"
+description = "Phân tích & cảnh báo tín hiệu MUA/BÁN/GIỮ cho FPT, ACV, HVN (công cụ hỗ trợ quyết định, không đặt lệnh)."
+requires-python = ">=3.11,<3.14"
+# vnstock/vnai cài từ https://vnstocks.com/api/simple — xem requirements.txt
+dependencies = [
+    "vnstock==4.0.9",
+    "vnai==2.6.4",
+    "vnstock_ezchart==1.0.2",
+    "numpy==2.2.6",
+    "pandas==2.3.3",
+    "requests==2.34.2",
+    "PyYAML==6.0.3",
+    "python-dotenv==1.2.4",
+    "tzdata==2026.6",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.2.0"]
+
+[tool.setuptools.packages.find]
+include = ["vnsignal*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

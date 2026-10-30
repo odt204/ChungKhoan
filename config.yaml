@@ -1,0 +1,19 @@
+timezone: Asia/Ho_Chi_Minh
+data_source: VCI
+start_date: "2020-01-01"
+
+symbols:
+  FPT: {exchange: HOSE}
+  ACV: {exchange: UPCOM}
+  HVN: {exchange: HOSE}
+
+# Giờ đóng cửa (giờ VN). Nến của ngày hôm nay chỉ được ghi khi đã qua
+# giờ đóng cửa + eod_buffer_minutes, tránh lưu nến đang chạy dở.
+exchanges:
+  HOSE: {close: "14:45"}
+  UPCOM: {close: "15:00"}
+eod_buffer_minutes: 15
+
+# Khi eod thấy giá các phiên cũ lệch so với file (giá điều chỉnh do cổ tức/
+# chia tách), tải lại toàn bộ lịch sử. Ngưỡng lệch tương đối:
+adjustment_tolerance: 0.002

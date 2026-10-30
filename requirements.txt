@@ -1,0 +1,13 @@
+# vnstock và vnai không còn trên PyPI; tác giả phát hành qua index riêng.
+# Mọi package khác lấy từ PyPI. Version được pin chính xác.
+--extra-index-url https://vnstocks.com/api/simple
+vnstock==4.0.9
+vnai==2.6.4
+vnstock_ezchart==1.0.2
+numpy==2.2.6
+pandas==2.3.3
+requests==2.34.2
+PyYAML==6.0.3
+python-dotenv==1.2.4
+tzdata==2026.6
+pytest==9.2.0
