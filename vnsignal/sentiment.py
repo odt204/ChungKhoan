@@ -52,13 +52,16 @@ def _prompt(symbol: str, batch: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _score_batch(client, model: str, symbol: str, batch: list[dict]) -> dict[int, tuple[float, str]]:
+def _score_batch(client, ncfg: dict, symbol: str, batch: list[dict]) -> dict[int, tuple[float, str]]:
     response = client.messages.create(
-        model=model,
-        max_tokens=4096,
+        model=ncfg["sentiment_model"],
+        max_tokens=8192,  # chừa chỗ cho thinking (tính vào max_tokens) + JSON của cả lô
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": _prompt(symbol, batch)}],
-        output_config={"format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
+        output_config={
+            "format": {"type": "json_schema", "schema": OUTPUT_SCHEMA},
+            "effort": ncfg["sentiment_effort"],
+        },
     )
     if response.stop_reason != "end_turn":
         raise ValueError(f"stop_reason={response.stop_reason}")
@@ -90,7 +93,7 @@ def score_pending(records: list[dict], symbol: str, cfg: dict, client=None) -> i
     for start in range(0, len(pending), ncfg["batch_size"]):
         batch = pending[start:start + ncfg["batch_size"]]
         try:
-            result = _score_batch(client, ncfg["sentiment_model"], symbol, batch)
+            result = _score_batch(client, ncfg, symbol, batch)
         except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as e:
             log.warning("%s: Anthropic API từ chối khoá (%s) → bỏ qua sentiment", symbol, type(e).__name__)
             break

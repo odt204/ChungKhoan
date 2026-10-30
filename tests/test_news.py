@@ -99,8 +99,10 @@ def test_score_pending_maps_and_clamps_scores():
     assert recs[0]["sentiment"] == 1.0
     assert recs[0]["sentiment_model"] == CFG["news"]["sentiment_model"]
     call = client.calls[0]
-    assert call["model"] == "claude-haiku-4-5"
+    assert call["model"] == "claude-haiku-5-5"
     assert call["output_config"]["format"]["type"] == "json_schema"
+    assert call["output_config"]["effort"] == "low"
+    assert not {"temperature", "top_p", "top_k", "thinking"} & call.keys()
     assert "Vietnam Airlines" in call["messages"][0]["content"]
 
 

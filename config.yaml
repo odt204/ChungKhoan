@@ -62,7 +62,8 @@ news:
     - {source: Vietstock, url: "https://vietstock.vn/830/chung-khoan/co-phieu.rss"}
     - {source: Vietstock, url: "https://vietstock.vn/737/doanh-nghiep/hoat-dong-kinh-doanh.rss"}
     - {source: Vietstock, url: "https://vietstock.vn/144/chung-khoan.rss"}
-  sentiment_model: claude-haiku-4-5
+  sentiment_model: claude-haiku-5-5
+  sentiment_effort: low   # Haiku 5.5 mặc định bật thinking; chấm điểm là phân loại đơn giản → low
   batch_size: 20          # số tin chấm điểm trong 1 lần gọi API
   window_days: 3          # tin trong N ngày gần nhất (giờ VN) tính vào sentiment hiện tại
   max_confidence_adjust: 10   # sentiment ±1 → confidence ±10 (chỉ là modifier)

@@ -84,7 +84,7 @@ số cổ phiếu (làm tròn lô 100) chỉ tính lúc gửi alert bằng `CAPI
 - Nguồn: tin doanh nghiệp từ VCI (không có URL, dedupe theo `news_id`) + RSS CafeF/Vietstock trong `config.yaml`,
   lọc theo `news_match` / `news_exclude` của từng mã (ví dụ bỏ "FPT Retail" — mã FRT).
 - Dedupe theo hash URL (http/https coi như một); tin đã lưu không bị ghi đè.
-- Chấm điểm −1..+1 bằng Claude (`news.sentiment_model`, mặc định `claude-haiku-4-5`) qua SDK `anthropic`,
+- Chấm điểm −1..+1 bằng Claude (`news.sentiment_model`, mặc định `claude-haiku-5-5`, effort `low`) qua SDK `anthropic`,
   key lấy từ `ANTHROPIC_API_KEY`. Thiếu key / API lỗi → log warning, tin để chưa chấm, sentiment = 0, lệnh vẫn chạy;
   lần chạy sau có key sẽ chấm bù.
 - Sentiment chỉ là **modifier**: trung bình điểm tin trong `window_days` ngày gần nhất × 10 cộng vào confidence
