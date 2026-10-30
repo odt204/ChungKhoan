@@ -36,6 +36,7 @@ Mọi lệnh chạy qua một entry point:
 | `fundamentals` | Cập nhật `data/fundamentals/{symbol}.json` |
 | `signals` | Tính tín hiệu BUY/SELL/HOLD cho toàn bộ lịch sử, ghi `data/signals/{symbol}.csv` |
 | `backtest` | Walk-forward (tối ưu 2020–2023, kiểm tra 2024–nay), ghi `reports/backtest_{symbol}.md` |
+| `news` | Tin VCI + RSS CafeF/Vietstock lọc theo mã, dedupe, chấm sentiment, ghi `data/news/{symbol}.jsonl` |
 
 Test: `.\.venv\Scripts\python.exe -m pytest -q`
 
@@ -61,6 +62,17 @@ Kiểm tra nguồn VCI: `.\.venv\Scripts\python.exe scripts\smoke_vci.py FPT`
 Điểm ≥ `buy_threshold` → BUY, ≤ −`sell_threshold` → SELL, còn lại HOLD. Độ tin cậy = |điểm| × 100.
 Stop-loss = giá − 2×ATR14, take-profit = giá + 3×ATR14. Tỷ trọng vốn cho lệnh mua = min(35%, 2% × giá / (giá − SL));
 số cổ phiếu (làm tròn lô 100) chỉ tính lúc gửi alert bằng `CAPITAL_VND`, không ghi vào file commit.
+
+## Tin tức & sentiment
+
+- Nguồn: tin doanh nghiệp từ VCI (không có URL, dedupe theo `news_id`) + RSS CafeF/Vietstock trong `config.yaml`,
+  lọc theo `news_match` / `news_exclude` của từng mã (ví dụ bỏ "FPT Retail" — mã FRT).
+- Dedupe theo hash URL (http/https coi như một); tin đã lưu không bị ghi đè.
+- Chấm điểm −1..+1 bằng Claude (`news.sentiment_model`, mặc định `claude-haiku-4-5`) qua SDK `anthropic`,
+  key lấy từ `ANTHROPIC_API_KEY`. Thiếu key / API lỗi → log warning, tin để chưa chấm, sentiment = 0, lệnh vẫn chạy;
+  lần chạy sau có key sẽ chấm bù.
+- Sentiment chỉ là **modifier**: trung bình điểm tin trong `window_days` ngày gần nhất × 10 cộng vào confidence
+  theo hướng tín hiệu (BUY: tin tốt tăng; SELL: tin xấu tăng; HOLD: không đổi). Không bao giờ đổi BUY/SELL/HOLD.
 
 Ghi chú về dữ liệu VCI:
 

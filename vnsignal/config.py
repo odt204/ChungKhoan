@@ -13,6 +13,7 @@ DATA_DIR = ROOT / "data"
 OHLCV_DIR = DATA_DIR / "ohlcv"
 FUNDAMENTALS_DIR = DATA_DIR / "fundamentals"
 SIGNALS_DIR = DATA_DIR / "signals"
+NEWS_DIR = DATA_DIR / "news"
 REPORTS_DIR = ROOT / "reports"
 
 TZ = ZoneInfo("Asia/Ho_Chi_Minh")

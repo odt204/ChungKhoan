@@ -9,7 +9,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from vnsignal.config import (
-    FUNDAMENTALS_DIR, OHLCV_DIR, REPORTS_DIR, ROOT, SIGNALS_DIR, capital_vnd, load_config, now_vn,
+    FUNDAMENTALS_DIR, NEWS_DIR, OHLCV_DIR, REPORTS_DIR, ROOT, SIGNALS_DIR, capital_vnd, load_config, now_vn,
 )
 from vnsignal.data import get_source
 from vnsignal.market import drop_unfinished_bars
@@ -156,6 +156,47 @@ def cmd_backtest(cfg: dict, symbols: list[str]) -> None:
             log.info("    Trọng số tối ưu: %s, ngưỡng ±%g", bt.is_opt.weights, bt.is_opt.thresholds[0])
 
 
+def cmd_news(cfg: dict, symbols: list[str]) -> None:
+    from vnsignal.news import collect, fetch_rss
+    from vnsignal.sentiment import adjust_confidence, aggregate, score_pending
+    from vnsignal.store import merge_jsonl, read_jsonl, write_jsonl
+
+    ncfg = cfg["news"]
+    source = get_source(cfg["data_source"])
+    rss = fetch_rss(ncfg["rss"])
+    sources_ok = bool(rss)
+    for symbol in symbols:
+        try:
+            adapter_items = source.get_news(symbol)
+            sources_ok = True
+        except Exception as e:  # noqa: BLE001
+            log.warning("%s: lỗi lấy tin từ %s: %s", symbol, source.name, e)
+            adapter_items = []
+        path = NEWS_DIR / f"{symbol}.jsonl"
+        added = merge_jsonl(path, collect(symbol, cfg["symbols"][symbol], adapter_items, rss))
+        records = read_jsonl(path)
+        scored = score_pending(records, symbol, cfg)
+        if scored:
+            write_jsonl(path, records)
+        sentiment, n = aggregate(records, now_vn().date(), ncfg["window_days"])
+        unscored = sum(r["sentiment"] is None for r in records)
+        log.info(
+            "%s: +%d tin mới (tổng %d), chấm %d, chưa chấm %d | sentiment %d ngày = %+.2f (%d tin)",
+            symbol, added, len(records), scored, unscored, ncfg["window_days"], sentiment, n,
+        )
+        signals = read_csv(SIGNALS_DIR / f"{symbol}.csv")
+        if not signals.empty:
+            last = signals.iloc[-1]
+            adj = adjust_confidence(last["signal"], int(last["confidence"]), sentiment, ncfg["max_confidence_adjust"])
+            log.info("    tín hiệu %s %s: confidence %d → %d sau sentiment", last["date"], last["signal"],
+                     last["confidence"], adj)
+        for r in sorted(records, key=lambda r: r.get("published_at") or "", reverse=True)[:3]:
+            score = "  –  " if r["sentiment"] is None else f"{r['sentiment']:+.2f}"
+            log.info("    [%s] %s %s: %s", score, (r.get("published_at") or "")[:10], r["source"], r["title"][:90])
+    if not sources_ok:
+        raise RuntimeError("Mọi nguồn tin đều lỗi")
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(ROOT / ".env")
     _setup_logging()
@@ -169,6 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         ("fundamentals", "Cập nhật thông tin cơ bản + chỉ số tài chính"),
         ("signals", "Tính tín hiệu BUY/SELL/HOLD, ghi data/signals/{symbol}.csv"),
         ("backtest", "Backtest walk-forward, ghi reports/backtest_{symbol}.md"),
+        ("news", "Thu thập tin (VCI + RSS CafeF/Vietstock), chấm sentiment, ghi data/news/{symbol}.jsonl"),
     ]:
         p = sub.add_parser(name, help=help_text)
         p.add_argument("--symbols", nargs="+", choices=list(cfg["symbols"]), default=list(cfg["symbols"]))
@@ -187,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
             cmd_signals(cfg, args.symbols)
         elif args.command == "backtest":
             cmd_backtest(cfg, args.symbols)
+        elif args.command == "news":
+            cmd_news(cfg, args.symbols)
     except Exception:
         log.exception("Lệnh `%s` lỗi", args.command)
         return 1

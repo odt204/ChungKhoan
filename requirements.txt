@@ -7,6 +7,7 @@ vnstock_ezchart==1.0.2
 numpy==2.2.6
 pandas==2.3.3
 requests==2.34.2
+anthropic==2.3.0
 PyYAML==6.0.3
 python-dotenv==1.2.4
 tzdata==2026.6

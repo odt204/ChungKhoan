@@ -3,10 +3,21 @@ data_source: VCI
 start_date: "2020-01-01"
 
 # Có thể override trọng số riêng từng mã: FPT: {exchange: HOSE, weights: {trend: 2, ...}}
+# news_match: regex lọc tin RSS theo mã (tiêu đề + mô tả); news_exclude: cụm từ bỏ đi
+# trước khi so khớp (công ty khác trùng tên, ví dụ FPT Retail = mã FRT).
 symbols:
-  FPT: {exchange: HOSE}
-  ACV: {exchange: UPCOM}
-  HVN: {exchange: HOSE}
+  FPT:
+    exchange: HOSE
+    news_match: ['\bFPT\b']
+    news_exclude: [FPT Retail, FPT Shop, Chứng khoán FPT, FPTS]
+  ACV:
+    exchange: UPCOM
+    news_match: ['\bACV\b', 'Cảng [Hh]àng không Việt Nam']
+    news_exclude: []
+  HVN:
+    exchange: HOSE
+    news_match: ['\bHVN\b', 'Vietnam Airlines']
+    news_exclude: []
 
 # Giờ đóng cửa (giờ VN) và biên độ giá so với giá tham chiếu (close phiên trước).
 # Nến của ngày hôm nay chỉ được ghi khi đã qua giờ đóng cửa + eod_buffer_minutes.
@@ -43,6 +54,18 @@ signals:
   volume: {ma: 20, spike: 1.5}
   breakout_window: 20
   cross_lookback: 3     # số phiên coi một lần cắt (EMA/MACD) là "vừa xảy ra"
+
+news:
+  rss:
+    - {source: CafeF, url: "https://cafef.vn/thi-truong-chung-khoan.rss"}
+    - {source: CafeF, url: "https://cafef.vn/doanh-nghiep.rss"}
+    - {source: Vietstock, url: "https://vietstock.vn/830/chung-khoan/co-phieu.rss"}
+    - {source: Vietstock, url: "https://vietstock.vn/737/doanh-nghiep/hoat-dong-kinh-doanh.rss"}
+    - {source: Vietstock, url: "https://vietstock.vn/144/chung-khoan.rss"}
+  sentiment_model: claude-haiku-4-5
+  batch_size: 20          # số tin chấm điểm trong 1 lần gọi API
+  window_days: 3          # tin trong N ngày gần nhất (giờ VN) tính vào sentiment hiện tại
+  max_confidence_adjust: 10   # sentiment ±1 → confidence ±10 (chỉ là modifier)
 
 backtest:
   in_sample: ["2020-01-01", "2023-12-31"]

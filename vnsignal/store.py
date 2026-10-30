@@ -44,6 +44,37 @@ def upsert_csv(path: Path, new: pd.DataFrame, key: str = "date") -> tuple[int, i
     return added, changed
 
 
+def read_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def write_jsonl(path: Path, records: list[dict]) -> None:
+    """Ghi JSONL sort theo published_at rồi key (thứ tự ổn định, diff git gọn)."""
+    records = sorted(records, key=lambda r: (r.get("published_at") or "", r["key"]))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        for r in records:
+            f.write(json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def merge_jsonl(path: Path, new: list[dict], key: str = "key") -> int:
+    """Thêm bản ghi có `key` chưa tồn tại; bản ghi cũ giữ nguyên (kể cả sentiment đã chấm).
+    Trả về số bản ghi thêm. Không ghi file nếu không có gì mới."""
+    old = read_jsonl(path)
+    seen = {r[key] for r in old}
+    added = []
+    for r in new:
+        if r[key] not in seen:
+            seen.add(r[key])
+            added.append(r)
+    if added:
+        write_jsonl(path, old + added)
+    return len(added)
+
+
 def read_json(path: Path) -> dict | None:
     if not path.exists():
         return None
