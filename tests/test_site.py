@@ -46,6 +46,14 @@ def test_build_site_from_committed_data(tmp_path, monkeypatch):
         assert "Nếu làm theo tín hiệu trước đây thì sao?" in page and "Tin tức gần đây" in page
         assert "Vì sao?" in page and 'class="callout"' in page
 
+    s = json.loads((out / "data" / "summary.json").read_text(encoding="utf-8"))
+    assert s["meta"]["symbols"] == list(CFG["symbols"])
+    for symbol in CFG["symbols"]:
+        item = s[symbol]
+        assert item["signal"] in ("BUY", "SELL", "HOLD") and item["action"]["title"]
+        assert len(item["plain"]) == 4 and len(item["spark"]["c"]) == 60
+        assert item["stop_loss"] < item["close"] < item["take_profit"]
+
     # Không lộ vốn / số tiền tuyệt đối
     for f in out.rglob("*"):
         if f.is_file():

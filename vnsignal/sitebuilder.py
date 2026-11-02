@@ -110,8 +110,53 @@ def symbol_view(symbol: str, cfg: dict, today) -> dict:
     }
 
 
-def build(cfg: dict, out_dir: Path, today, generated_at: str) -> list[Path]:
-    """Sinh index.html, {symbol}.html, data/{symbol}.json, assets/*. Trả về danh sách file đã ghi."""
+SPARK_BARS = 60
+PAGES_URL = "https://odt204.github.io/ChungKhoan/"
+
+
+def summary(views: list[dict], generated_iso: str) -> dict:
+    """Bản tóm tắt gọn cho nơi khác đọc (artifact "Trạm 3 mã"): tín hiệu hiện tại, lời giải thích,
+    mức giá, 60 phiên gần nhất. Không có vốn hay số tiền tuyệt đối."""
+    out = {"meta": {
+        "generated_at": generated_iso,
+        "symbols": [v["symbol"] for v in views],
+        "sessions": sorted({v["signal"]["date"] for v in views if v["signal"]}),
+        "source": PAGES_URL,
+        "disclaimer": DISCLAIMER,
+    }}
+    for v in views:
+        s, ch, bp = v["signal"], v["chart"], v["backtest_plain"]
+        if not s:
+            out[v["symbol"]] = {"symbol": v["symbol"], "error": "Chưa có tín hiệu"}
+            continue
+        tail = slice(-SPARK_BARS, None)
+        out[v["symbol"]] = {
+            "symbol": v["symbol"], "exchange": v["exchange"], "name": v["name"], "price_limit": v["price_limit"],
+            "date": s["date"], "signal": s["signal"], "label": LABEL[s["signal"]],
+            "confidence": s["confidence"], "confidence_raw": s["confidence_raw"],
+            "confidence_label": explain.confidence_label(s["confidence"]),
+            "sentiment": s["sentiment"], "sentiment_label": explain.sentiment_label(s["sentiment"]) if s["n_news"] else None,
+            "n_news": s["n_news"], "window_days": s["window_days"],
+            "close": s["close"], "day_change": v["day_change"],
+            "stop_loss": s["stop_loss"], "take_profit": s["take_profit"], "sl_pct": v["sl_pct"], "tp_pct": v["tp_pct"],
+            "position_pct": s["position_pct"],
+            "action": v["action"], "plain": v["plain"], "reasons": s["reasons"],
+            "changes": [{k: c[k] for k in ("date", "from", "to", "close")} for c in v["changes"][:5]],
+            "ema_periods": ch["ema_periods"],
+            "spark": {k: ch[k][tail] for k in ("t", "c", "ema_fast", "ema_mid")},
+            "backtest": None if not bp else {
+                "start": bp["start"], "end": bp["end"], "verdict": bp["verdict"], "win": bp["win"],
+                "sig_cagr": bp["sig"]["cagr"], "bh_cagr": bp["bh"]["cagr"],
+                "sig_mdd": bp["sig"]["max_drawdown"], "bh_mdd": bp["bh"]["max_drawdown"],
+            },
+            "url": f"{PAGES_URL}{v['symbol']}.html",
+        }
+    return out
+
+
+def build(cfg: dict, out_dir: Path, today, generated_at: str, generated_iso: str | None = None) -> list[Path]:
+    """Sinh index.html, {symbol}.html, data/{symbol}.json, data/summary.json, assets/*.
+    Trả về danh sách file đã ghi."""
     env = _env()
     if out_dir.exists():
         shutil.rmtree(out_dir)
@@ -137,5 +182,11 @@ def build(cfg: dict, out_dir: Path, today, generated_at: str) -> list[Path]:
         views=views, counts=counts, sessions=sessions, active="index", **common), encoding="utf-8")
     guide = out_dir / "huong-dan.html"
     guide.write_text(env.get_template("guide.html").render(cfg=cfg, active="guide", **common), encoding="utf-8")
-    written += [index, guide]
+    summary_path = out_dir / "data" / "summary.json"
+    summary_path.write_text(
+        json.dumps(summary(views, generated_iso or generated_at), ensure_ascii=False, separators=(",", ":"),
+                   default=lambda o: o.item() if hasattr(o, "item") else str(o)),
+        encoding="utf-8",
+    )
+    written += [index, guide, summary_path]
     return written

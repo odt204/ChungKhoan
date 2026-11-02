@@ -223,7 +223,7 @@ def cmd_build_site(cfg: dict) -> None:
     from vnsignal.sitebuilder import SITE_DIR, build
 
     now = now_vn()
-    written = build(cfg, SITE_DIR, now.date(), now.strftime("%H:%M %d/%m/%Y"))
+    written = build(cfg, SITE_DIR, now.date(), now.strftime("%H:%M %d/%m/%Y"), now.isoformat(timespec="seconds"))
     total_kb = sum(p.stat().st_size for p in written) / 1024
     log.info("build-site: %d file, %.0f KB → %s", len(written), total_kb, SITE_DIR.relative_to(ROOT).as_posix())
     for p in written:
