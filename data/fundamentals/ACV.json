@@ -1,20 +1,20 @@
 {
-  "fetched_at": "2026-10-30T09:43:56+07:00",
+  "fetched_at": "2026-11-03T01:28:08+07:00",
   "overview": {
-    "current_price": 41000.0,
+    "current_price": 39700.0,
     "foreigner_percentage": 0.01702195,
     "free_float_percentage": 0.0460415699,
     "highest_price1_year": 64800.0,
     "issue_share": 3582324023.0,
     "listing_date": "2016-11-21T00:00:00",
     "lowest_price1_year": 37000.0,
-    "market_cap": 146889614239092.0,
+    "market_cap": 143687016562530.0,
     "maximum_foreign_percentage": 0.49,
     "organ_name": "Tổng Công ty Cảng Hàng không Việt Nam - CTCP",
     "rating": "M-PF",
     "sector": "Industrial Goods & Services",
     "target_price": 43300.0,
-    "upside_to_target_percent": 0.056097561
+    "upside_to_target_percent": 0.0906801008
   },
   "ratios_ttm": [
     {
@@ -107,12 +107,12 @@
       "current_ratio": 2.1863231803,
       "debt_to_equity": 0.3148284882,
       "dividend_yield": 0.0,
-      "ev_to_ebitda": 9.0405127484,
+      "ev_to_ebitda": 8.8504821404,
       "gross_margin": 0.6029787493,
       "market_cap": 167287367226054.0,
-      "pb": 2.1033532697,
-      "pe": 14.9541824329,
-      "ps": 5.6727571629,
+      "pb": 2.0574943822,
+      "pe": 14.6281401177,
+      "ps": 5.5490754512,
       "quarter": 5,
       "roa": 0.1278422106,
       "roe": 0.1666007548,

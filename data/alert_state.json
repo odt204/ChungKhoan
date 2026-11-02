@@ -6,10 +6,10 @@
     "signal": "HOLD"
   },
   "FPT": {
-    "confidence": 21,
-    "date": "2026-10-30",
-    "notified_at": "2026-10-30T22:06:20+07:00",
-    "signal": "HOLD"
+    "confidence": 68,
+    "date": "2026-11-02",
+    "notified_at": "2026-11-03T01:28:29+07:00",
+    "signal": "SELL"
   },
   "HVN": {
     "confidence": 7,
