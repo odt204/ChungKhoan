@@ -1506,3 +1506,4 @@ date,close,score,signal,confidence,stop_loss,take_profit,position_pct,reasons
 2026-11-02,50200,-0.643,SELL,64,47064,54904,0.0,"Giá dưới EMA20, EMA50, EMA200 | Thủng đáy 20 phiên (52,400) | Khối lượng đột biến 1.6× TB20, phiên giảm"
 2026-11-03,50400,-0.214,HOLD,21,47181,55229,0.0,"Giá dưới EMA20, EMA50, EMA200 | RSI14 = 16.4 (quá bán); MACD dưới đường tín hiệu | Khối lượng 1.2× TB20, chưa xác nhận"
 2026-11-04,53900,-0.214,HOLD,21,50411,59134,0.0,"Giá dưới EMA20, EMA50, EMA200 | Khối lượng đột biến 1.6× TB20, phiên tăng | RSI14 = 38.1; MACD dưới đường tín hiệu"
+2026-11-05,52900,-0.357,HOLD,36,49403,58146,0.0,"Giá dưới EMA20, EMA50, EMA200 | RSI14 = 35.3; MACD dưới đường tín hiệu | Khối lượng 1.0× TB20, chưa xác nhận"
