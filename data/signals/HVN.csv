@@ -1507,3 +1507,4 @@ date,close,score,signal,confidence,stop_loss,take_profit,position_pct,reasons
 2026-11-03,21000,-0.071,HOLD,7,19949,22576,0.0,"Giá trên EMA20; dưới EMA50, EMA200 | RSI14 = 51.7; MACD trên đường tín hiệu | Khối lượng 1.3× TB20, chưa xác nhận"
 2026-11-04,22050,0.5,BUY,50,20896,23782,0.35,"Vượt đỉnh 20 phiên (21,500) | Khối lượng đột biến 2.9× TB20, phiên tăng | RSI14 = 61.8; MACD trên đường tín hiệu"
 2026-11-05,22350,0.5,BUY,50,21128,24183,0.35,"Vượt đỉnh 20 phiên (22,100) | Khối lượng đột biến 3.2× TB20, phiên tăng | RSI14 = 64.2; MACD trên đường tín hiệu"
+2026-11-06,21850,0.071,HOLD,7,20637,23670,0.0,"RSI14 = 57.9; MACD trên đường tín hiệu | Giá trên EMA20, EMA50; dưới EMA200 | Khối lượng 1.0× TB20, chưa xác nhận"

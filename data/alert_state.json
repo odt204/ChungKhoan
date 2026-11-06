@@ -12,9 +12,9 @@
     "signal": "HOLD"
   },
   "HVN": {
-    "confidence": 46,
-    "date": "2026-11-04",
-    "notified_at": "2026-11-04T23:24:00+07:00",
-    "signal": "BUY"
+    "confidence": 7,
+    "date": "2026-11-06",
+    "notified_at": "2026-11-06T22:58:42+07:00",
+    "signal": "HOLD"
   }
 }
