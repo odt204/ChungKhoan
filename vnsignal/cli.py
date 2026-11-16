@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 import sys
 from datetime import date, timedelta
 
@@ -9,7 +10,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from vnsignal.config import (
-    ALERT_STATE_FILE, FUNDAMENTALS_DIR, NEWS_DIR, OHLCV_DIR, REPORTS_DIR, ROOT, SIGNALS_DIR, capital_vnd, load_config, now_vn,
+    ALERT_STATE_FILE, FUNDAMENTALS_DIR, INTRADAY_STATE_FILE, NEWS_DIR, OHLCV_DIR, REPORTS_DIR, ROOT, SIGNALS_DIR, capital_vnd, load_config, now_vn,
 )
 from vnsignal.data import get_source
 from vnsignal.market import drop_unfinished_bars
@@ -219,11 +220,60 @@ def cmd_alert(cfg: dict, symbols: list[str], summary: bool) -> None:
              "cập nhật" if written else "không đổi")
 
 
-def cmd_build_site(cfg: dict) -> None:
+def _gh_output(**values) -> None:
+    """Ghi output cho bước GitHub Actions (bỏ qua khi chạy local)."""
+    path = os.environ.get("GITHUB_OUTPUT")
+    if path:
+        with open(path, "a", encoding="utf-8") as f:
+            for k, v in values.items():
+                f.write(f"{k}={v}\n")
+
+
+def cmd_intraday(cfg: dict, force: bool) -> None:
+    """Giá tạm tính trong phiên + cảnh báo chạm cắt lỗ/chốt lời (mỗi sự kiện 1 lần/ngày) + build site."""
+    from vnsignal import alert, live
+    from vnsignal.store import read_json
+
+    now = now_vn()
+    if not force and not live.in_session(now, cfg):
+        log.info("Ngoài giờ giao dịch (%s) → bỏ qua", now.strftime("%a %H:%M"))
+        _gh_output(deploy="false")
+        return
+    symbols = list(cfg["symbols"])
+    prices = live.fetch_live(get_source(cfg["data_source"]), symbols, now)
+    if not prices:
+        log.info("Chưa có nến phiên hôm nay cho mã nào (ngày nghỉ hoặc chưa khớp lệnh) → bỏ qua")
+        _gh_output(deploy="false")
+        return
+
+    sender = alert.telegram_sender()
+    state = read_json(INTRADAY_STATE_FILE)
+    today = now.date().isoformat()
+    sent_any = False
+    for symbol, lv in prices.items():
+        sig = alert.latest_signal(symbol, cfg, now.date())
+        log.info("%s: %s (%+.2f%%) lúc %s, cao %s / thấp %s", symbol, f"{lv['price']:,.0f}", lv["change"] * 100,
+                 now.strftime("%H:%M"), f"{lv['high']:,.0f}", f"{lv['low']:,.0f}")
+        if not sig:
+            continue
+        state, events = live.new_events(state, today, symbol, live.level_events(lv, sig))
+        for event, level in events:
+            log.info("    chạm %s %s", live.EVENT_LABEL[event], f"{level:,.0f}")
+            if sender and sender(live.event_message(symbol, event, level, lv, sig)):
+                live.mark_sent(state, symbol, event)
+                sent_any = True
+    if sent_any:  # chỉ ghi (và commit) khi vừa gửi cảnh báo, tránh commit rỗng mỗi 15 phút
+        write_json(INTRADAY_STATE_FILE, state)
+    cmd_build_site(cfg, prices)
+    _gh_output(deploy="true")
+
+
+def cmd_build_site(cfg: dict, live: dict | None = None) -> None:
     from vnsignal.sitebuilder import SITE_DIR, build
 
     now = now_vn()
-    written = build(cfg, SITE_DIR, now.date(), now.strftime("%H:%M %d/%m/%Y"), now.isoformat(timespec="seconds"))
+    written = build(cfg, SITE_DIR, now.date(), now.strftime("%H:%M %d/%m/%Y"), now.isoformat(timespec="seconds"),
+                    live=live)
     total_kb = sum(p.stat().st_size for p in written) / 1024
     log.info("build-site: %d file, %.0f KB → %s", len(written), total_kb, SITE_DIR.relative_to(ROOT).as_posix())
     for p in written:
@@ -287,6 +337,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("build-site", help="Sinh dashboard tĩnh vào site/ (mở được bằng file://)")
     p = sub.add_parser("run-daily", help="eod → signals → news → alert --summary → build-site")
     p.add_argument("--backfill", action="store_true", help="Tải lại toàn bộ lịch sử OHLCV trước khi chạy")
+    p = sub.add_parser("intraday", help="Giá tạm tính trong phiên + cảnh báo chạm cắt lỗ/chốt lời + build-site")
+    p.add_argument("--force", action="store_true", help="Chạy cả ngoài giờ giao dịch (để thử)")
     args = parser.parse_args(argv)
 
     try:
@@ -308,6 +360,8 @@ def main(argv: list[str] | None = None) -> int:
             cmd_build_site(cfg)
         elif args.command == "run-daily":
             cmd_run_daily(cfg, args.backfill)
+        elif args.command == "intraday":
+            cmd_intraday(cfg, args.force)
     except Exception:
         log.exception("Lệnh `%s` lỗi", args.command)
         return 1

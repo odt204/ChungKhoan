@@ -150,12 +150,25 @@ def summary(views: list[dict], generated_iso: str) -> dict:
                 "sig_mdd": bp["sig"]["max_drawdown"], "bh_mdd": bp["bh"]["max_drawdown"],
             },
             "url": f"{PAGES_URL}{v['symbol']}.html",
+            "live": v.get("live"),
         }
     return out
 
 
-def build(cfg: dict, out_dir: Path, today, generated_at: str, generated_iso: str | None = None) -> list[Path]:
+def live_view(lv: dict | None, sig: dict | None) -> dict | None:
+    """Giá tạm tính trong phiên kèm trạng thái so với mức cắt lỗ / chốt lời của tín hiệu hiện tại."""
+    if not lv:
+        return None
+    state = None
+    if sig and sig["signal"] != "SELL":
+        state = "below_sl" if lv["price"] <= sig["stop_loss"] else "above_tp" if lv["price"] >= sig["take_profit"] else None
+    return {**lv, "time": datetime.fromisoformat(lv["at"]).strftime("%H:%M"), "state": state}
+
+
+def build(cfg: dict, out_dir: Path, today, generated_at: str, generated_iso: str | None = None,
+          live: dict | None = None) -> list[Path]:
     """Sinh index.html, {symbol}.html, data/{symbol}.json, data/summary.json, assets/*.
+    `live`: giá tạm tính trong phiên theo mã (lệnh intraday), None ngoài phiên.
     Trả về danh sách file đã ghi."""
     env = _env()
     if out_dir.exists():
@@ -166,7 +179,10 @@ def build(cfg: dict, out_dir: Path, today, generated_at: str, generated_iso: str
 
     symbols = list(cfg["symbols"])
     views = [symbol_view(s, cfg, today) for s in symbols]
-    common = {"symbols": symbols, "generated_at": generated_at}
+    for v in views:
+        v["live"] = live_view((live or {}).get(v["symbol"]), v["signal"])
+    live_time = next((v["live"]["time"] for v in views if v["live"]), None)
+    common = {"symbols": symbols, "generated_at": generated_at, "live_time": live_time}
 
     for v in views:
         data_path = out_dir / "data" / f"{v['symbol']}.json"

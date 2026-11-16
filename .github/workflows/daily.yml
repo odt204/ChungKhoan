@@ -2,8 +2,11 @@
 name: daily
 
 on:
+  # Dự phòng. Lịch của GitHub thực tế trễ 7–10 tiếng, nên lần chạy chính được kích hoạt từ ngoài
+  # lúc 15:20 qua workflow_dispatch (xem README, mục "Kích hoạt đúng giờ"). Chạy hai lần không sao:
+  # lần sau không có nến mới thì không đổi data và không gửi lại bản tổng hợp.
   schedule:
-    - cron: "20 8 * * 1-5"   # 08:20 UTC = 15:20 giờ VN, thứ Hai–thứ Sáu (GitHub có thể chạy trễ 5–30 phút)
+    - cron: "20 8 * * 1-5"   # 08:20 UTC = 15:20 giờ VN, thứ Hai–thứ Sáu
   workflow_dispatch:
     inputs:
       backfill:
@@ -25,7 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      VNSTOCK_TELEMETRY: "0"
       PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v7
@@ -70,6 +72,10 @@ jobs:
   deploy:
     needs: run
     runs-on: ubuntu-latest
+    # Chung khoá với intraday.yml: hai workflow không deploy Pages cùng lúc.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

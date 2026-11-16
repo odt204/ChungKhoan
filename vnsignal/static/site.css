@@ -166,6 +166,24 @@ footer {
 .chg.up { color: var(--buy); }
 .chg.down { color: var(--sell); }
 
+.live {
+  margin-top: .75rem;
+  padding: .55rem .75rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+}
+.live p { margin: 0; }
+.live-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .45rem; font-size: .92rem; }
+.live-head strong { font-size: 1.05rem; }
+.live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ema-fast); align-self: center; }
+.live-warn { border: 1px solid var(--sell); background: var(--sell-bg); }
+.live-good { border: 1px solid var(--buy); background: var(--buy-bg); }
+@media (prefers-reduced-motion: no-preference) {
+  .live .dot { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+}
+
 .callout {
   margin: .85rem 0 .75rem;
   padding: .7rem .85rem;

@@ -3,25 +3,35 @@ from datetime import date, datetime
 import pandas as pd
 
 from vnsignal.config import TZ
-from vnsignal.data.vci import normalize_ohlcv
+from vnsignal.data.vci import camel_to_snake, parse_gap_chart
 from vnsignal.market import drop_unfinished_bars
 
 
-def test_normalize_ohlcv_converts_unit_and_filters_range():
-    # Dạng output thật của vnstock Quote.history (VCI): giá nghìn đồng, có phiên trước start.
-    raw = pd.DataFrame({
-        "time": pd.to_datetime(["2019-12-31", "2020-01-02", "2020-01-02", "2020-01-03"]),
-        "open": [18.43, 18.27, 18.27, 18.30],
-        "high": [18.47, 18.30, 18.30, 18.76],
-        "low": [18.14, 18.18, 18.18, 18.27],
-        "close": [18.18, 18.27, 18.27, 18.63],
-        "volume": [766000, 692100, 692100, 1604350],
-    })
-    df = normalize_ohlcv(raw, date(2020, 1, 1), date(2020, 1, 31))
+def _ts(d):
+    return str(int(datetime.fromisoformat(d + "T00:00:00+00:00").timestamp()))
+
+
+def test_parse_gap_chart_filters_range_and_dedupes():
+    # Dạng response thật của gap-chart: mảng cột, giá theo đồng, t = 00:00 UTC, có phiên trước start.
+    payload = [{
+        "symbol": "FPT",
+        "t": [_ts("2019-12-31"), _ts("2020-01-02"), _ts("2020-01-02"), _ts("2020-01-03")],
+        "o": [18430, 18270, 18270, 18300], "h": [18470, 18300, 18300, 18760],
+        "l": [18140, 18180, 18180, 18270], "c": [18180, 18270, 18270, 18630],
+        "v": [766000, 692100, 692100, 1604350],
+    }]
+    df = parse_gap_chart(payload, date(2020, 1, 1), date(2020, 1, 31))
     assert list(df.columns) == ["date", "open", "high", "low", "close", "volume"]
     assert list(df["date"]) == ["2020-01-02", "2020-01-03"]
     assert list(df["close"]) == [18270, 18630]
     assert df["close"].dtype == "int64"
+    assert parse_gap_chart([], date(2020, 1, 1), date(2020, 1, 31)).empty
+
+
+def test_camel_to_snake_matches_stored_field_names():
+    assert camel_to_snake("highestPrice1Year") == "highest_price1_year"
+    assert camel_to_snake("evToEbitda") == "ev_to_ebitda"
+    assert camel_to_snake("upsideToTargetPercent") == "upside_to_target_percent"
 
 
 def _bars(dates):

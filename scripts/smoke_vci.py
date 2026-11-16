@@ -1,70 +1,62 @@
-﻿"""Smoke test nguồn VCI qua vnstock: gọi thật từng hàm cho 1 mã và in kết quả.
+﻿"""Smoke test nguồn VCI: gọi thật adapter (giá, thông tin cơ bản, tin tức) cho 1 mã và in kết quả.
 
 Chạy: python scripts/smoke_vci.py [SYMBOL]
 Exit code != 0 nếu bất kỳ lời gọi nào lỗi hoặc trả về rỗng.
 """
 
-import os
 import sys
 import traceback
-from importlib.metadata import version
+from datetime import date, timedelta
+from pathlib import Path
 
-os.environ.setdefault("VNSTOCK_TELEMETRY", "0")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import pandas as pd  # noqa: E402
-from vnstock import Company, Finance, Quote  # noqa: E402
-
-pd.set_option("display.width", 200)
-pd.set_option("display.max_columns", 12)
+from vnsignal.config import now_vn  # noqa: E402
+from vnsignal.data.vci import VCISource  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 
-def check(name, fn):
+def check(name, fn, show):
     print(f"\n===== {name} =====")
     try:
-        df = fn()
+        result = fn()
     except Exception:
         traceback.print_exc()
         return False
-    if df is None or len(df) == 0:
+    if result is None or len(result) == 0:
         print("RỖNG")
         return False
-    print(f"type={type(df).__name__} rows={len(df)} cols={list(df.columns)[:15]}")
-    print(df.head(3).to_string(max_colwidth=60))
-    if len(df) > 3:
-        print("...")
-        print(df.tail(2).to_string(max_colwidth=60))
+    show(result)
     return True
 
 
 def main():
     symbol = (sys.argv[1] if len(sys.argv) > 1 else "FPT").upper()
-    print(f"vnstock={version('vnstock')} python={sys.version.split()[0]} symbol={symbol}")
+    src = VCISource()
+    today = now_vn().date()
+    print(f"symbol={symbol} today(VN)={today}")
 
     results = {
         "ohlcv_recent": check(
-            "Quote.history 1D (2026-01-01 -> nay)",
-            lambda: Quote(source="VCI", symbol=symbol).history(start="2026-01-01", interval="1D"),
+            "OHLCV 20 ngày gần nhất", lambda: src.get_ohlcv(symbol, today - timedelta(days=20), today),
+            lambda df: print(f"rows={len(df)}\n{df.tail(3).to_string(index=False)}"),
         ),
         "ohlcv_2020": check(
-            "Quote.history 1D (2020-01-01 -> 2020-01-31)",
-            lambda: Quote(source="VCI", symbol=symbol).history(
-                start="2020-01-01", end="2020-01-31", interval="1D"
-            ),
+            "OHLCV 01/2020", lambda: src.get_ohlcv(symbol, date(2020, 1, 1), date(2020, 1, 31)),
+            lambda df: print(f"rows={len(df)} {df['date'].min()} → {df['date'].max()}"),
         ),
-        "overview": check("Company.overview", lambda: Company(source="VCI", symbol=symbol).overview()),
-        "ratio_summary": check(
-            "Company.ratio_summary", lambda: Company(source="VCI", symbol=symbol).ratio_summary()
+        "fundamentals": check(
+            "Thông tin cơ bản + chỉ số TTM", lambda: src.get_fundamentals(symbol),
+            lambda f: print(f"{f['overview']['organ_name']} | {len(f['ratios_ttm'])} quý, mới nhất "
+                            f"Q{f['ratios_ttm'][-1]['quarter']}/{f['ratios_ttm'][-1]['year']}"),
         ),
-        "ratio": check(
-            "Finance.ratio (quarter)",
-            lambda: Finance(source="VCI", symbol=symbol).ratio(period="quarter"),
+        "news": check(
+            "Tin tức", lambda: src.get_news(symbol),
+            lambda n: print(f"{len(n)} tin, mới nhất: {n[0]['published_at']} {n[0]['title'][:70]}"),
         ),
-        "news": check("Company.news", lambda: Company(source="VCI", symbol=symbol).news()),
     }
-
     print("\n===== TỔNG KẾT =====")
     for k, ok in results.items():
         print(f"{'PASS' if ok else 'FAIL'}  {k}")

@@ -15,6 +15,18 @@
   </p>
   <p class="muted small">Giá đóng cửa phiên {{ s.date | date_vn }}</p>
 
+  {% if v.live %}{% set lv = v.live %}
+  <div class="live {{ 'live-warn' if lv.state == 'below_sl' else 'live-good' if lv.state == 'above_tp' else '' }}">
+    <p class="live-head"><span class="dot" aria-hidden="true"></span>Giá tạm tính lúc {{ lv.time }}
+      <strong class="num">{{ lv.price | vnd }}</strong>
+      <span class="chg {{ 'up' if lv.change > 0 else 'down' if lv.change < 0 else '' }}">{{ lv.change | spct(2) }}</span></p>
+    <p class="muted small">Cao {{ lv.high | vnd }} · thấp {{ lv.low | vnd }} · KL {{ (lv.volume / 1000000) | num(2) }} triệu cp.
+      {% if lv.state == 'below_sl' %}<strong>Đang dưới mức cắt lỗ.</strong>
+      {% elif lv.state == 'above_tp' %}<strong>Đã vượt mức chốt lời.</strong>{% endif %}
+      Tín hiệu bên dưới vẫn theo giá đóng cửa phiên {{ s.date | date_vn }}.</p>
+  </div>
+  {% endif %}
+
   <div class="callout">
     <p class="callout-title">{{ v.action.title }}</p>
     <p>{{ v.action.text }}</p>

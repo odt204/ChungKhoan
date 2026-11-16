@@ -15,6 +15,7 @@ FUNDAMENTALS_DIR = DATA_DIR / "fundamentals"
 SIGNALS_DIR = DATA_DIR / "signals"
 NEWS_DIR = DATA_DIR / "news"
 ALERT_STATE_FILE = DATA_DIR / "alert_state.json"
+INTRADAY_STATE_FILE = DATA_DIR / "intraday_alerts.json"
 REPORTS_DIR = ROOT / "reports"
 
 TZ = ZoneInfo("Asia/Ho_Chi_Minh")

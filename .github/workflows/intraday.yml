@@ -1,0 +1,79 @@
+# Giá tạm tính trong phiên + cảnh báo chạm cắt lỗ/chốt lời, cập nhật dashboard.
+# Không có lịch của GitHub (lịch đó trễ hàng giờ): được gọi từ bên ngoài ~15 phút/lần trong giờ giao dịch
+# qua API workflow_dispatch (README, mục "Kích hoạt đúng giờ"). Ngoài giờ giao dịch thì tự bỏ qua.
+name: intraday
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: intraday
+  cancel-in-progress: true   # lần mới thay lần cũ còn đang chạy
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONIOENCODING: utf-8
+    outputs:
+      deploy: ${{ steps.intraday.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Cài dependency
+        run: python -m pip install -r requirements.txt
+
+      - name: intraday
+        id: intraday
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m vnsignal.cli intraday
+
+      # Chỉ khi vừa gửi cảnh báo mới có thay đổi: lưu lại để không báo trùng trong ngày.
+      - name: Commit trạng thái cảnh báo
+        if: ${{ !cancelled() }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/intraday_alerts.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Không có cảnh báo mới"
+          else
+            git commit -m "data: cảnh báo trong phiên $(TZ=Asia/Ho_Chi_Minh date '+%Y-%m-%d %H:%M') (giờ VN)"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload site
+        if: ${{ steps.intraday.outputs.deploy == 'true' }}
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: run
+    if: ${{ needs.run.outputs.deploy == 'true' }}
+    runs-on: ubuntu-latest
+    # Chung khoá với daily.yml: hai workflow không deploy Pages cùng lúc.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

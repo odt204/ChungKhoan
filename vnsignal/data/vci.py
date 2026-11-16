@@ -1,25 +1,37 @@
-"""Nguồn VCI (Vietcap) qua vnstock 4.0.9.
+"""Nguồn VCI (Vietcap): gọi thẳng endpoint công khai bằng requests.
 
-Hành vi thật đã verify bằng scripts/smoke_vci.py:
-- Quote.history trả giá theo NGHÌN đồng (close 52.7 ↔ overview current_price 52700).
-- Quote.history(start=...) trả thừa vài phiên trước start → phải lọc lại.
-- Giá lịch sử là giá đã điều chỉnh (cổ tức/chia tách).
-- Company.news không có URL bài viết, chỉ có news_id, news_title, public_date.
+Trước đây đi qua vnstock 4.0.9; từ 10/11/2026 kênh cài vnstock cũ bị gỡ (HTTP 410) và thế hệ 6
+chuyển sang Open API có khoá, nên adapter gọi trực tiếp các endpoint mà vnstock 4.x đã dùng.
+Hành vi thật đã verify (scripts/smoke_vci.py):
+- gap-chart trả mảng cột t/o/h/l/c/v; giá theo ĐỒNG, đã điều chỉnh cổ tức/chia tách; t là unix giây
+  (00:00 UTC của ngày giao dịch). Có cả nến của phiên đang chạy.
+- countBack đếm theo số nến, nên có thể trả thừa phiên trước `start` → phải lọc lại.
+- Tin tức không có URL bài viết, chỉ có newsId, newsTitle, publicDate (giờ VN).
 """
 
-import json
-import os
-from datetime import date
+import re
+import time
+from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
+import requests
 
 from vnsignal.config import TZ
 from vnsignal.data.base import OHLCV_COLUMNS, MarketDataSource
 
-# Tắt telemetry tuỳ chọn của vnai trước khi vnstock được import.
-os.environ.setdefault("VNSTOCK_TELEMETRY", "0")
-
-PRICE_UNIT = 1000  # VCI trả giá theo nghìn đồng
+CHART_URL = "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart"
+IQ_URL = "https://iq.vietcap.com.vn/api/iq-insight-service/v1"
+# Endpoint chỉ trả dữ liệu cho request có Referer/Origin của trang Vietcap (giống trình duyệt).
+HEADERS = {
+    "Accept": "application/json, text/plain, */*",
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/152.0.0.0 Safari/537.36",
+    "Referer": "https://trading.vietcap.com.vn/",
+    "Origin": "https://trading.vietcap.com.vn/",
+}
+TIMEOUT = 20
+RETRIES = 2
 
 OVERVIEW_FIELDS = [
     "organ_name", "sector", "listing_date", "current_price", "market_cap", "issue_share",
@@ -33,70 +45,95 @@ RATIO_FIELDS = [
     "dividend_yield", "market_cap",
 ]
 RATIO_QUARTERS = 8
+NEWS_PAGE_SIZE = 50
 
 
-def normalize_ohlcv(raw: pd.DataFrame, start: date, end: date) -> pd.DataFrame:
-    """Chuẩn hoá output Quote.history: đổi sang VND, lọc đúng [start, end], bỏ trùng ngày."""
-    if raw is None or raw.empty:
+def camel_to_snake(name: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
+def parse_gap_chart(payload: list, start: date, end: date) -> pd.DataFrame:
+    """Mảng cột gap-chart → OHLCV chuẩn, lọc đúng [start, end], bỏ trùng ngày, sort."""
+    if not payload or not isinstance(payload, list) or not payload[0].get("t"):
         return pd.DataFrame(columns=OHLCV_COLUMNS)
-    df = raw.rename(columns={"time": "date"})[OHLCV_COLUMNS].copy()
-    df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+    d = payload[0]
+    df = pd.DataFrame({
+        "date": [datetime.fromtimestamp(int(t), timezone.utc).strftime("%Y-%m-%d") for t in d["t"]],
+        "open": d["o"], "high": d["h"], "low": d["l"], "close": d["c"], "volume": d["v"],
+    })
     df = df[(df["date"] >= start.isoformat()) & (df["date"] <= end.isoformat())]
     for col in ["open", "high", "low", "close"]:
-        df[col] = (df[col].astype(float) * PRICE_UNIT).round().astype("int64")
+        df[col] = df[col].astype(float).round().astype("int64")
     df["volume"] = df["volume"].astype("int64")
-    df = df.drop_duplicates("date", keep="last").sort_values("date")
-    return df.reset_index(drop=True)
-
-
-def _records(df: pd.DataFrame) -> list[dict]:
-    """DataFrame → list dict JSON-serializable (NaN → None, numpy → python)."""
-    df = df.loc[:, ~df.columns.duplicated()]
-    return json.loads(df.to_json(orient="records", force_ascii=False, date_format="iso"))
+    return df.drop_duplicates("date", keep="last").sort_values("date").reset_index(drop=True)
 
 
 class VCISource(MarketDataSource):
     name = "VCI"
 
-    def get_ohlcv(self, symbol: str, start: date, end: date) -> pd.DataFrame:
-        from vnstock import Quote
+    def __init__(self, session: requests.Session | None = None):
+        self.http = session or requests.Session()
+        self.http.headers.update(HEADERS)
 
-        raw = Quote(source="VCI", symbol=symbol).history(
-            start=start.isoformat(), end=end.isoformat(), interval="1D"
-        )
-        return normalize_ohlcv(raw, start, end)
+    def _request(self, method: str, url: str, **kw):
+        last = None
+        for attempt in range(RETRIES + 1):
+            try:
+                r = self.http.request(method, url, timeout=TIMEOUT, **kw)
+                r.raise_for_status()
+                return r.json()
+            except (requests.ConnectionError, requests.Timeout) as e:
+                last = e
+                time.sleep(2 * (attempt + 1))
+        raise last
+
+    def _iq(self, path: str):
+        body = self._request("GET", f"{IQ_URL}/{path}")
+        if not isinstance(body, dict) or not body.get("successful"):
+            raise ValueError(f"VCI trả lỗi cho {path}: {str(body)[:200]}")
+        return body["data"]
+
+    def get_ohlcv(self, symbol: str, start: date, end: date) -> pd.DataFrame:
+        bars = len(pd.bdate_range(start, end)) + 5
+        to = int(datetime.combine(end + timedelta(days=1), datetime.min.time(), timezone.utc).timestamp())
+        payload = self._request("POST", CHART_URL, json={
+            "timeFrame": "ONE_DAY", "symbols": [symbol], "to": to, "countBack": bars,
+        })
+        return parse_gap_chart(payload, start, end)
 
     def get_fundamentals(self, symbol: str) -> dict:
-        from vnstock import Company
-
-        company = Company(source="VCI", symbol=symbol)
-        overview = _records(company.overview())
-        ratios = company.ratio_summary()
-        if not overview or ratios.empty:
+        details = self._iq(f"company/details?ticker={symbol}")
+        stats = self._iq(f"company/{symbol}/statistics-financial")
+        if not details or not stats:
             raise ValueError(f"VCI trả fundamentals rỗng cho {symbol}")
-        ratios = ratios.sort_values(["year", "quarter"]).tail(RATIO_QUARTERS)
-        ratios = ratios[[c for c in RATIO_FIELDS if c in ratios.columns]]
+        overview = {camel_to_snake(k): v for k, v in details.items()}
+        overview["organ_name"] = details.get("viOrganName") or details.get("organName")
+        rows = []
+        for raw in stats:
+            row = {camel_to_snake(k): v for k, v in raw.items()}
+            row["year"], row["quarter"] = int(row["year"]), int(row["quarter"])
+            rows.append({k: row.get(k) for k in RATIO_FIELDS})
+        rows = sorted(rows, key=lambda r: (r["year"], r["quarter"]))[-RATIO_QUARTERS:]
         return {
             "symbol": symbol,
             "source": self.name,
-            "overview": {k: overview[0].get(k) for k in OVERVIEW_FIELDS},
-            "ratios_ttm": _records(ratios),
+            "overview": {k: overview.get(k) for k in OVERVIEW_FIELDS},
+            "ratios_ttm": rows,
         }
 
     def get_news(self, symbol: str) -> list[dict]:
-        from vnstock import Company
-
-        df = Company(source="VCI", symbol=symbol).news()
-        if df.empty:
-            return []
+        today = datetime.now(TZ).date()
+        page = self._iq(f"news?ticker={symbol}&fromDate={today.year - 1}0101&toDate={today:%Y%m%d}"
+                        f"&languageId=1&page=0&size={NEWS_PAGE_SIZE}")
         items = []
-        for row in _records(df):
-            published = pd.Timestamp(row["public_date"]).tz_localize(TZ)
+        for row in page.get("content") or []:
+            if not row.get("newsTitle") or not row.get("publicDate"):
+                continue
             items.append({
-                "id": f"vci:{row['news_id']}",
-                "title": row["news_title"],
-                "published_at": published.isoformat(),
-                "url": row.get("news_source_link"),
+                "id": f"vci:{row['newsId']}",
+                "title": row["newsTitle"],
+                "published_at": pd.Timestamp(row["publicDate"]).tz_localize(TZ).isoformat(),
+                "url": row.get("newsSourceLink"),
                 "source": self.name,
             })
         return items

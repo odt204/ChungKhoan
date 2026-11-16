@@ -7,8 +7,8 @@ bằng GitHub Actions. Đây là **công cụ hỗ trợ quyết định, không
 
 ## Cài đặt local (Windows 11, PowerShell)
 
-Yêu cầu Python **3.11** (production chạy 3.11; `vnstock_ezchart` chưa hỗ trợ 3.14). Nếu Python cài từ
-python.org bằng Python install manager:
+Production chạy Python **3.11** (bản 3.11 trở lên đều dùng được). Nếu Python cài từ python.org bằng
+Python install manager:
 
 ```powershell
 py install 3.11
@@ -17,9 +17,10 @@ py -V:3.11 -m venv .venv
 Copy-Item .env.example .env   # rồi mở .env điền giá trị
 ```
 
-`vnstock` và `vnai` không còn trên PyPI, tác giả phát hành qua `https://vnstocks.com/api/simple`
-(đã khai báo trong `requirements.txt`). Giấy phép vnstock: dùng cá nhân. Telemetry tuỳ chọn của `vnai`
-được tắt bằng `VNSTOCK_TELEMETRY=0`.
+Mọi dependency cài từ PyPI. Dữ liệu VCI (Vietcap) lấy bằng `requests` gọi thẳng endpoint công khai
+(`vnsignal/data/vci.py`). Trước 16/11/2026 hệ thống dùng thư viện vnstock 4.0.9; từ 10/11/2026 kênh cài bản đó bị gỡ
+và vnstock thế hệ 6 chuyển sang Open API cần khoá, nên adapter gọi trực tiếp các endpoint mà vnstock 4.x đã dùng.
+Đây vẫn là nguồn không chính thức: Vietcap có thể đổi hoặc chặn bất kỳ lúc nào — chạy `smoke-vci` để kiểm tra.
 
 ## Lệnh
 
@@ -39,6 +40,7 @@ Mọi lệnh chạy qua một entry point:
 | `news` | Tin VCI + RSS CafeF/Vietstock lọc theo mã, dedupe, chấm sentiment, ghi `data/news/{symbol}.jsonl` |
 | `alert [--summary]` | Telegram: chỉ gửi mã đổi tín hiệu so với `data/alert_state.json`; `--summary` gửi 1 tin tổng hợp mọi mã |
 | `build-site` | Sinh dashboard tĩnh vào `site/` (mở `site/index.html` bằng trình duyệt là xem được) |
+| `intraday [--force]` | Trong phiên: giá tạm tính lên dashboard + Telegram khi chạm cắt lỗ/chốt lời (`--force`: chạy cả ngoài giờ) |
 | `run-daily [--backfill]` | Cả chuỗi: backfill (nếu thiếu) → eod → fundamentals → signals → news → alert → build-site |
 
 `run-daily`: eod / signals / build-site lỗi thì dừng (exit 1); fundamentals / news / alert lỗi thì log và chạy tiếp.
@@ -155,18 +157,48 @@ từ artifact của workflow `daily`.
 
 1. Tab **Actions** → nếu GitHub hỏi, bấm bật workflows cho repo.
 2. Chọn **smoke-vci** → **Run workflow** (nhánh `main`). Workflow này chỉ kiểm tra runner GitHub (ở nước ngoài)
-   gọi được VCI, CafeF, Vietstock và cài được vnstock. Phải xanh trước khi dùng workflow `daily`.
+   gọi được VCI, CafeF, Vietstock. Phải xanh trước khi dùng workflow `daily`.
 3. Chọn **daily** → **Run workflow** (để `backfill` tắt, vì data đã có trong repo). Workflow chạy `run-daily`,
    commit thay đổi trong `data/` bằng `github-actions[bot]`, rồi deploy `site/` lên Pages.
 4. Dashboard: `https://<user>.github.io/<repo>/` (link cũng hiện ở job **deploy** và Settings → Pages).
 
-Sau đó `daily` tự chạy lúc `cron: "20 8 * * 1-5"` = 08:20 UTC = **15:20 giờ VN, thứ Hai–thứ Sáu**. Ngày lễ VN
-không có nến mới: workflow vẫn chạy nhưng không đổi data và không gửi bản tổng hợp.
+`daily` có lịch dự phòng `cron: "20 8 * * 1-5"` (08:20 UTC = 15:20 giờ VN, thứ Hai–thứ Sáu), nhưng lịch của
+GitHub thực tế trễ 7–10 tiếng, nên lần chạy chính nên kích hoạt từ ngoài (mục 5). Ngày lễ VN không có nến mới:
+workflow vẫn chạy nhưng không đổi data và không gửi bản tổng hợp.
 Chọn `backfill = true` khi chạy tay để tải lại toàn bộ lịch sử từ 2020-01-01 (ví dụ sau khi xoá data).
+
+### 5. Kích hoạt đúng giờ (cập nhật trong phiên ~15 phút/lần)
+
+Gọi API `workflow_dispatch` của GitHub thì workflow chạy ngay (khoảng 1–2 phút là xong). Dùng một dịch vụ hẹn giờ
+miễn phí bên ngoài, ví dụ cron-job.org, để gọi:
+
+1. **Tạo token GitHub giới hạn**: GitHub → Settings → Developer settings → Personal access tokens →
+   **Fine-grained tokens** → Generate new token. Repository access: **Only select repositories** → repo này.
+   Permissions → Repository permissions → **Actions: Read and write** (không cấp quyền nào khác). Đặt hạn dùng và
+   ghi nhớ ngày hết hạn. Token chỉ dán vào dịch vụ hẹn giờ, không đưa vào repo hay `.env`.
+2. **Tạo 2 lịch** trên dịch vụ hẹn giờ, múi giờ `Asia/Ho_Chi_Minh`, thứ Hai–thứ Sáu, phương thức **POST**,
+   header `Accept: application/vnd.github+json`, `Authorization: Bearer <token>`,
+   `X-GitHub-Api-Version: 2022-11-28`, body `{"ref":"main"}`:
+
+   | Lịch | URL | Giờ chạy |
+   |---|---|---|
+   | Trong phiên | `https://api.github.com/repos/<user>/<repo>/actions/workflows/intraday.yml/dispatches` | phút 0, 15, 30, 45 của giờ 9–14 |
+   | Sau phiên | `https://api.github.com/repos/<user>/<repo>/actions/workflows/daily.yml/dispatches` | 15:20 |
+3. Bấm chạy thử: GitHub trả **HTTP 204** là đúng; tab Actions hiện một lần chạy `intraday`/`daily` mới.
+
+Workflow `intraday` (lệnh `python -m vnsignal.cli intraday`):
+
+- Lấy nến của phiên đang chạy cho 3 mã, cập nhật dashboard: mỗi thẻ có ô "Giá tạm tính lúc HH:MM".
+  Dữ liệu này không ghi vào `data/ohlcv/` (chỉ nhận nến đã đóng phiên).
+- Gửi Telegram khi giá thấp nhất trong phiên chạm **mức cắt lỗ**, hoặc giá cao nhất chạm **mức chốt lời** của tín hiệu
+  hiện tại (chỉ khi tín hiệu là MUA/GIỮ). Mỗi sự kiện báo **một lần mỗi ngày** (`data/intraday_alerts.json`).
+- Tín hiệu MUA/BÁN/GIỮ **không đổi trong phiên**: vẫn tính theo giá đóng cửa, cập nhật bởi `daily` sau phiên.
+- Ngoài 9:00–15:05 thứ Hai–thứ Sáu, hoặc ngày nghỉ không có nến, workflow tự bỏ qua, không deploy.
+- Giá chậm hơn app công ty chứng khoán (15 phút/lần + Pages cache tới 10 phút). Khi đặt lệnh, xem giá trên app.
 
 ### Lưu ý về GitHub Actions
 
-- Lịch `cron` của GitHub có thể **trễ 5–30 phút** (đôi khi hơn) vào giờ cao điểm; không chạy đúng từng phút.
+- Lịch `cron` của GitHub **không đúng giờ**: đo thực tế trễ 7–10 tiếng. Vì vậy dùng kích hoạt từ ngoài (mục 5).
 - GitHub **tự tắt scheduled workflow nếu repo không có commit nào trong 60 ngày**. Workflow `daily` tự commit
   data mỗi ngày giao dịch nên thường không bị; nếu bị tắt, vào tab Actions bật lại.
 - Pages trên gói Free chỉ cho repo public.

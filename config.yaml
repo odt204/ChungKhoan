@@ -26,6 +26,12 @@ exchanges:
   UPCOM: {close: "15:00", price_limit: 0.15}
 eod_buffer_minutes: 15
 
+# Cập nhật trong phiên (lệnh `intraday`, gọi ~15 phút/lần): chỉ giá tạm tính + cảnh báo chạm
+# cắt lỗ/chốt lời. Tín hiệu MUA/BÁN/GIỮ vẫn tính theo giá đóng cửa.
+intraday:
+  session_start: "09:00"
+  session_end: "15:05"   # sau ATC HOSE (14:45) và giờ đóng UPCOM (15:00)
+
 # Khi eod thấy giá các phiên cũ lệch so với file (giá điều chỉnh do cổ tức/
 # chia tách), tải lại toàn bộ lịch sử. Ngưỡng lệch tương đối:
 adjustment_tolerance: 0.002

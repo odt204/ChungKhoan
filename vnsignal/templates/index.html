@@ -11,8 +11,14 @@
     <span class="chip chip-sell">{{ counts.SELL }} BÁN</span>
     <span class="chip chip-hold">{{ counts.HOLD }} GIỮ</span>
   </div>
-  <p class="muted small">Giá là <strong>giá đóng cửa</strong>, cập nhật khoảng 15:20 mỗi ngày giao dịch — không phải giá trực tiếp.
+  {% if live_time %}
+  <p class="muted small"><strong>Đang trong phiên:</strong> giá tạm tính cập nhật khoảng 15 phút/lần (lần gần nhất {{ live_time }}),
+    chậm hơn app công ty chứng khoán. Tín hiệu MUA/BÁN/GIỮ vẫn theo giá đóng cửa, đổi sau khi hết phiên.
     Lần đầu dùng? <a href="huong-dan.html">Đọc hướng dẫn 2 phút →</a></p>
+  {% else %}
+  <p class="muted small">Giá là <strong>giá đóng cửa</strong>, cập nhật sau mỗi phiên. Trong giờ giao dịch có thêm giá tạm tính
+    khoảng 15 phút/lần. Lần đầu dùng? <a href="huong-dan.html">Đọc hướng dẫn 2 phút →</a></p>
+  {% endif %}
 </section>
 
 <div class="cards">
