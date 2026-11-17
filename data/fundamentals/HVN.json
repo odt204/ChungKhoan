@@ -1,11 +1,11 @@
 {
-  "fetched_at": "2026-11-10T01:52:08+07:00",
+  "fetched_at": "2026-11-18T00:40:16+07:00",
   "overview": {
     "current_price": 21850.0,
-    "foreigner_percentage": 0.08526711,
-    "free_float_percentage": 0.08,
+    "foreigner_percentage": 0.08545279,
+    "free_float_percentage": 0.0785000001,
     "highest_price1_year": 31400.0,
-    "issue_share": 3111498211.0,
+    "issue_share": 3111498211,
     "listing_date": "2017-01-03T00:00:00",
     "lowest_price1_year": 19300.0,
     "market_cap": 67986235910350.0,
@@ -32,7 +32,7 @@
       "roa": 0.1137767516,
       "roe": 0.0,
       "roic": 0.6376637449,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.0803897454,
@@ -49,7 +49,7 @@
       "roa": 0.1451647905,
       "roe": 0.0,
       "roic": 0.6773139285,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.0766473324,
@@ -66,7 +66,7 @@
       "roa": 0.1334320396,
       "roe": 0.0,
       "roic": 0.4948083146,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.0627631252,
@@ -83,7 +83,7 @@
       "roa": 0.1096880392,
       "roe": 0.0,
       "roic": 0.4607361482,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.0627631252,
@@ -100,7 +100,7 @@
       "roa": 0.1096880392,
       "roe": -3.526548069,
       "roic": 0.4607361482,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.0677115512,
@@ -117,7 +117,7 @@
       "roa": 0.1136482013,
       "roe": 1.813175811,
       "roic": 0.4164558693,
-      "year": "2026"
+      "year": 2026
     },
     {
       "after_tax_profit_margin": 0.0363967858,
@@ -134,7 +134,7 @@
       "roa": 0.0595073763,
       "roe": 0.5807166527,
       "roic": 0.2533852749,
-      "year": "2026"
+      "year": 2026
     },
     {
       "after_tax_profit_margin": 0.0314189598,
@@ -151,7 +151,7 @@
       "roa": 0.0516749524,
       "roe": 0.4645559832,
       "roic": 0.2201893634,
-      "year": "2026"
+      "year": 2026
     }
   ],
   "source": "VCI",

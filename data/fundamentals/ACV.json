@@ -1,20 +1,20 @@
 {
-  "fetched_at": "2026-11-10T01:52:06+07:00",
+  "fetched_at": "2026-11-18T00:40:15+07:00",
   "overview": {
-    "current_price": 39400.0,
-    "foreigner_percentage": 0.01702615,
+    "current_price": 38900.0,
+    "foreigner_percentage": 0.01694392,
     "free_float_percentage": 0.0460415699,
     "highest_price1_year": 64800.0,
-    "issue_share": 3582324023.0,
+    "issue_share": 3582847523,
     "listing_date": "2016-11-21T00:00:00",
     "lowest_price1_year": 37000.0,
-    "market_cap": 140276644092634.0,
+    "market_cap": 139391810058953.0,
     "maximum_foreign_percentage": 0.49,
     "organ_name": "Tổng Công ty Cảng Hàng không Việt Nam - CTCP",
     "rating": "M-PF",
     "sector": "Industrial Goods & Services",
     "target_price": 43300.0,
-    "upside_to_target_percent": 0.0989847716
+    "upside_to_target_percent": 0.1131105398
   },
   "ratios_ttm": [
     {
@@ -32,7 +32,7 @@
       "roa": 0.1420419161,
       "roe": 0.1795863817,
       "roic": 0.1811117478,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.4667850872,
@@ -49,7 +49,7 @@
       "roa": 0.127218514,
       "roe": 0.1617590145,
       "roic": 0.1827805498,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.4863548087,
@@ -66,7 +66,7 @@
       "roa": 0.1319172224,
       "roe": 0.1680317658,
       "roic": 0.1806348285,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.4813258218,
@@ -83,24 +83,24 @@
       "roa": 0.1278422106,
       "roe": 0.1666007548,
       "roic": 0.174408703,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.4813258218,
       "current_ratio": 2.1863231803,
       "debt_to_equity": 0.3148284882,
       "dividend_yield": 0.0,
-      "ev_to_ebitda": 8.6481229246,
+      "ev_to_ebitda": 8.5956200609,
       "gross_margin": 0.6029787493,
       "market_cap": 167287367226054.0,
-      "pb": 2.0086603096,
-      "pe": 14.280945169,
-      "ps": 5.4173696465,
+      "pb": 1.9959901248,
+      "pe": 14.1908641266,
+      "ps": 5.3831980774,
       "quarter": 5,
       "roa": 0.1278422106,
       "roe": 0.1666007548,
       "roic": 0.174408703,
-      "year": "2025"
+      "year": 2025
     },
     {
       "after_tax_profit_margin": 0.4809432363,
@@ -117,7 +117,7 @@
       "roa": 0.1215120384,
       "roe": 0.1564577122,
       "roic": 0.1705254203,
-      "year": "2026"
+      "year": 2026
     },
     {
       "after_tax_profit_margin": 0.5081344441,
@@ -134,24 +134,24 @@
       "roa": 0.122669323,
       "roe": 0.1571235715,
       "roic": 0.1675975553,
-      "year": "2026"
+      "year": 2026
     },
     {
       "after_tax_profit_margin": 0.4727313855,
       "current_ratio": 1.9919939993,
       "debt_to_equity": 0.2654274357,
       "dividend_yield": 0.0,
-      "ev_to_ebitda": 8.7020374706,
+      "ev_to_ebitda": 8.6487690928,
       "gross_margin": 0.560858729,
-      "market_cap": 140276644092634.0,
-      "pb": 1.8388874904,
-      "pe": 13.2858159632,
-      "ps": 5.4041133235,
+      "market_cap": 139391810058953.0,
+      "pb": 1.827288195,
+      "pe": 13.2020119757,
+      "ps": 5.3700253724,
       "quarter": 3,
       "roa": 0.1132199387,
       "roe": 0.1443251946,
       "roic": 0.1497662055,
-      "year": "2026"
+      "year": 2026
     }
   ],
   "source": "VCI",
