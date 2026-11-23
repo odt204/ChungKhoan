@@ -1,20 +1,20 @@
 {
   "ACV": {
-    "confidence": 64,
-    "date": "2026-11-18",
-    "notified_at": "2026-11-19T00:18:16+07:00",
-    "signal": "SELL"
+    "confidence": 21,
+    "date": "2026-11-23",
+    "notified_at": "2026-11-24T03:18:15+07:00",
+    "signal": "HOLD"
   },
   "FPT": {
-    "confidence": 53,
-    "date": "2026-11-17",
-    "notified_at": "2026-11-18T00:40:31+07:00",
-    "signal": "SELL"
+    "confidence": 36,
+    "date": "2026-11-23",
+    "notified_at": "2026-11-24T03:18:15+07:00",
+    "signal": "HOLD"
   },
   "HVN": {
-    "confidence": 21,
-    "date": "2026-11-20",
-    "notified_at": "2026-11-20T23:59:59+07:00",
-    "signal": "HOLD"
+    "confidence": 79,
+    "date": "2026-11-23",
+    "notified_at": "2026-11-24T03:18:15+07:00",
+    "signal": "BUY"
   }
 }
